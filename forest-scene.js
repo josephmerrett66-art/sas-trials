@@ -1,3 +1,4 @@
+import {refineConifer,broadleafGeometry,flowerPatchGeometry,flowerSites} from './woodland-polish.js?v=1';
 import {controlLandmarkClearing} from './control-landmarks.js?v=irregular-route-1';
 import {createUniqueLandmarks} from './unique-landmarks.js?v=irregular-route-1';
 import {SECOND_CONTROL,secondControlClearing} from './second-control.js?v=irregular-route-1';
@@ -22,7 +23,7 @@ export function createForest(scene){
     if(kind){const old=mat;mat=createSurfaceMaterial(kind,old.color,{side:old.side,fog:old.fog});old.dispose();}
     const mesh=new THREE.InstancedMesh(geometry,mat,items.length);mesh.name=name;mesh.userData.decorative=decorative;
     items.forEach((item,i)=>{transform.position.set(0,0,0);transform.rotation.set(0,0,0);transform.scale.set(1,1,1);place(item,transform,i);if(!/mountain|cloud/.test(name))transform.position.y+=item.ground??terrainHeight(item.x,item.z);transform.updateMatrix();mesh.setMatrixAt(i,transform.matrix);if(item.shade!==undefined){shade.setScalar(item.shade);mesh.setColorAt(i,shade);}});
-    mesh.computeBoundingSphere();mesh.castShadow=/trunks|crowns|branches|knots|boulders|stumps|logs|roots/.test(name);mesh.receiveShadow=mesh.castShadow||/shrubs|ferns|grass|wood faces/.test(name);scene.add(mesh);return mesh;
+    mesh.computeBoundingSphere();mesh.castShadow=/trunks|crowns|branches|knots|boulders|stumps|logs|roots/.test(name);mesh.receiveShadow=mesh.castShadow||/shrubs|ferns|grass|wildflower|wood faces/.test(name);scene.add(mesh);return mesh;
   };
   const groundGeometry=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,TERRAIN_SEGMENTS,TERRAIN_SEGMENTS);groundGeometry.rotateX(-Math.PI/2);
   const positions=groundGeometry.attributes.position;
@@ -64,14 +65,14 @@ export function createForest(scene){
   // Each conifer family has its own serrated crown geometry and tier proportions.
   for(const type of [0,1,2,5]){
     const segments=type===1?9:type===2?8:7;
-    const geometry=new THREE.ConeGeometry(1,1,segments,3);
+    let geometry=new THREE.ConeGeometry(1,1,segments,2);
     const vertices=geometry.attributes.position;
     for(let i=0;i<vertices.count;i++){
       const x=vertices.getX(i),z=vertices.getZ(i),y=vertices.getY(i),angle=Math.atan2(z,x);
       const ragged=1+Math.sin(angle*5+y*13)*.16+Math.cos(angle*3+y*7)*.08;
       vertices.setXYZ(i,x*ragged,y+Math.sin(angle*4)*.025*(.5-y),z*ragged);
     }
-    geometry.computeVertexNormals();const crowns=[];
+    geometry.computeVertexNormals();geometry=refineConifer(geometry);const crowns=[];
     trees.filter(t=>t.species===type).forEach(t=>{
       const layers=type===0?3+Math.floor(random()*2):type===1?5+Math.floor(random()*3):type===2?4+Math.floor(random()*3):3;
       const bottom=type===0?.5:type===1?.28:type===2?.36:.32;
@@ -84,7 +85,7 @@ export function createForest(scene){
     batch(species[type]+' irregular crowns',geometry,material(type===1?0x547544:type===2?0x6b8140:0x657d3b),crowns,(c,o)=>{o.position.set(c.x,c.y,c.z);o.rotation.set((random()-.5)*.08,c.rotation,(random()-.5)*.08);o.scale.set(c.width,c.height,c.width*(.8+random()*.35));});
   }
   const leafy=[];trees.filter(t=>t.species===3).forEach(t=>{for(let i=0;i<5;i++){const angle=i*2.4,y=t.height*(.67+random()*.25);leafy.push({ground:t.ground,x:t.x+Math.sin(angle)*t.width*.55+t.leanX*y,z:t.z+Math.cos(angle)*t.width*.55+t.leanZ*y,y,size:t.width*(.65+random()*.3),shade:.65+random()*.35});}});
-  batch('Broadleaf clustered crowns',new THREE.IcosahedronGeometry(1,1),material(0x789044),leafy,(c,o)=>{o.position.set(c.x,c.y,c.z);o.rotation.y=random()*6;o.scale.set(c.size,c.size*.8,c.size);});
+  batch('Broadleaf clustered crowns',broadleafGeometry(),material(0x789044),leafy,(c,o)=>{o.position.set(c.x,c.y,c.z);o.rotation.y=random()*6;o.scale.set(c.size,c.size*.8,c.size);});
   const branches=[];trees.forEach(t=>{
     const count=t.species===4?6:t.species===3?4:2+Math.floor(random()*4);
     for(let i=0;i<count;i++){const y=t.trunkHeight*(.22+random()*.72);branches.push({ground:t.ground,x:t.x+t.leanX*y,z:t.z+t.leanZ*y,y,rotation:t.rotation+i*2.399+random()*.4,length:(t.species===4?.7:1)+random()*t.width*.6,tilt:t.species===4?1.2:.8+random()*.65});}
@@ -129,6 +130,7 @@ export function createForest(scene){
   batch('Distant mountain silhouettes',new THREE.ConeGeometry(1,1,5),material(0x829ead,{fog:false}),mountains,(m,o)=>{o.position.set(m.x,m.height*.5-6,m.z);o.rotation.y=random()*6;o.scale.set(m.width,m.height,m.width);},true);
   const clouds=[];for(let i=0;i<30;i++){const angle=random()*Math.PI*2,radius=100+random()*100;clouds.push({x:Math.sin(angle)*radius,z:Math.cos(angle)*radius,y:50+random()*20,width:6+random()*14});}
   batch('Faceted sky clouds',new THREE.IcosahedronGeometry(1,0),new THREE.MeshBasicMaterial({color:0xe9f2f6,fog:false}),clouds,(c,o)=>{o.position.set(c.x,c.y,c.z);o.scale.set(c.width,c.width*.25,c.width*.65);},true);
+  const flowers=flowerSites();batch('Small woodland wildflower patches',flowerPatchGeometry(),createSurfaceMaterial('foliage',0xffffff,{vertexColors:true,side:THREE.DoubleSide}),flowers,(f,o)=>{o.position.set(f.x,.015,f.z);o.rotation.y=f.rotation;o.scale.setScalar(f.size);},true);
   // Compact existing static batches once before visibility indexing. Random generation
   // stays unchanged, keeping every other checkpoint and the rest of the forest stable.
   for(const mesh of scene.children){if(!mesh.isInstancedMesh||/clouds|mountain/.test(mesh.name))continue;
@@ -138,7 +140,7 @@ export function createForest(scene){
     if(kept!==i){mesh.instanceMatrix.array.copyWithin(kept*16,i*16,(i+1)*16);if(mesh.instanceColor)mesh.instanceColor.array.copyWithin(kept*3,i*3,(i+1)*3);}kept++;
    }mesh.count=kept;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.computeBoundingSphere();
   }
-  scene.userData.forestStats={worldSize:WORLD_SIZE,areaMultiplier:WORLD_SIZE**2/280**2,expansionFromNavigation:WORLD_SIZE**2/640**2,trees:trees.length,species:Object.fromEntries(species.map((name,i)=>[name,trees.filter(t=>t.species===i).length])),grassClumps:grass.length,boulders:rocks.length,shrubs:bushes.length,obstacles:obstacles.length};
+  scene.userData.forestStats={worldSize:WORLD_SIZE,areaMultiplier:WORLD_SIZE**2/280**2,expansionFromNavigation:WORLD_SIZE**2/640**2,trees:trees.length,species:Object.fromEntries(species.map((name,i)=>[name,trees.filter(t=>t.species===i).length])),flowerPatches:flowers.length,grassClumps:grass.length,boulders:rocks.length,shrubs:bushes.length,obstacles:obstacles.length};
   const cleared=obstacles.filter(o=>(!firstControlClearing(o.x,o.z)||isControlBoulder(o.x,o.z))&&!secondControlClearing(o.x,o.z)&&!controlLandmarkClearing(o.x,o.z));
   createWreckLandmark(scene);
   for(const offset of [-1.5,0,1.5]){const x=SECOND_CONTROL.car.x,z=SECOND_CONTROL.car.z+offset;cleared.push({x,z,baseY:terrainHeight(x,z),radius:1.35,height:2.1});}
