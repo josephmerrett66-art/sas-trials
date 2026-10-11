@@ -10,3 +10,8 @@ stress test for rendering changes. Save results, compare frame times and draw ca
 and optimize any regression before completing the change. Do not claim a locked
 60 FPS from an average alone. The current baseline is below 60 FPS on the development
 Mac; report that limitation honestly until measured frame times meet the budget.
+
+# Delivery
+
+The user wants finished work pushed directly to `main` at the end of each goal, every time,
+after the checks above pass. No feature branches or pull requests unless asked.
