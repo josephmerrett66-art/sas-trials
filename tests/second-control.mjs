@@ -4,16 +4,20 @@ import {createForest,collideForest} from '../forest.js';
 import {SECOND_CONTROL,secondControlClearing} from '../second-control.js';
 import {makeCheckpoints,NavigationExercise} from '../navigation.js';
 import {terrainHeight} from '../terrain.js';
+import {ForestVisibility} from '../forest-visibility.js';
 const scene=new THREE.Scene(),obstacles=createForest(scene),points=makeCheckpoints(obstacles),b=points[1],exercise=new NavigationExercise(points);
-assert.equal(b.grid,'H1');assert.equal(b.controlDescription,'Large boulder beside a fallen trunk, south side.');
-assert(SECOND_CONTROL.log.x>SECOND_CONTROL.rock.x);assert.equal(b.x,SECOND_CONTROL.rock.x);assert(b.z>SECOND_CONTROL.rock.z);
-assert.equal(obstacles.filter(o=>secondControlClearing(o.x,o.z)).length,4,'Only the landmark rock and three log colliders remain locally');
-const matrix=new THREE.Matrix4();
-for(const [name,feature] of [['Large faceted boulders',SECOND_CONTROL.rock],['Fallen tree logs',SECOND_CONTROL.log]]){
- const mesh=scene.getObjectByName(name);let found=0;for(let i=0;i<mesh.count;i++){mesh.getMatrixAt(i,matrix);if(Math.abs(matrix.elements[12]-feature.x)<.01&&Math.abs(matrix.elements[14]-feature.z)<.01)found++;}assert.equal(found,1,'Landmark reuses its existing batch');
-}
+assert.equal(b.grid,'H1');assert.equal(b.controlDescription,'Burned-out car, rear (south) end.');
+assert.equal(b.x,SECOND_CONTROL.car.x);assert(b.z>SECOND_CONTROL.car.z);
+assert.equal(obstacles.filter(o=>secondControlClearing(o.x,o.z)).length,3,'Only the wreck colliders remain locally');
+const wreck=scene.getObjectByName('Burned-out rusted car');assert(wreck?.isInstancedMesh);assert.equal(wreck.count,1);assert(!Array.isArray(wreck.material));assert.equal(wreck.geometry.groups.length,0,'Single merged draw');assert(wreck.material.vertexColors);assert(!wreck.castShadow);assert(!wreck.receiveShadow);
+assert(wreck.geometry.attributes.position.count/3<1500,'Bounded low-poly wreck geometry');
+assert.equal(scene.children.filter(m=>m.name==='Burned-out rusted car').length,1,'A unique landmark, not a repeating forest prop');
+const matrix=new THREE.Matrix4();wreck.getMatrixAt(0,matrix);assert(Math.abs(matrix.elements[12]-SECOND_CONTROL.car.x)<.01);assert(Math.abs(matrix.elements[14]-SECOND_CONTROL.car.z)<.01);
+assert(Array.from(wreck.geometry.attributes.position.array).every(Number.isFinite));
 const player={...b,vx:0,vz:0,radius:.3,grounded:true,groundHeight:terrainHeight};assert.equal(exercise.interact(player),false,'B stays locked until A is registered');
 Object.assign(player,points[0]);assert.equal(exercise.interact(player),true);assert.equal(exercise.current,b);
-for(const pos of [{x:SECOND_CONTROL.log.x,z:SECOND_CONTROL.log.z},{x:b.x,z:SECOND_CONTROL.rock.z-6},{x:SECOND_CONTROL.rock.x-6,z:SECOND_CONTROL.rock.z},{x:SECOND_CONTROL.rock.x+6,z:SECOND_CONTROL.rock.z}]){Object.assign(player,pos,{y:terrainHeight(pos.x,pos.z)});assert.equal(exercise.interact(player),false,'Wrong feature/side cannot register B');}
+for(const pos of [{x:b.x,z:SECOND_CONTROL.car.z-5},{x:b.x-5,z:SECOND_CONTROL.car.z},{x:b.x+5,z:SECOND_CONTROL.car.z}]){Object.assign(player,pos,{y:terrainHeight(pos.x,pos.z)});assert.equal(exercise.interact(player),false,'Wrong side cannot register B');}
+Object.assign(player,{x:SECOND_CONTROL.car.x,z:SECOND_CONTROL.car.z,y:terrainHeight(SECOND_CONTROL.car.x,SECOND_CONTROL.car.z)});collideForest(player,obstacles);assert(Math.hypot(player.x-SECOND_CONTROL.car.x,player.z-SECOND_CONTROL.car.z)>1,'The car body blocks walking through it');
 Object.assign(player,b);collideForest(player,obstacles);assert(Math.hypot(player.x-b.x,player.z-b.z)<1e-8,'B is physically reachable');assert.equal(exercise.interact(player),true);assert.equal(exercise.current.code,'C');exercise.reset();assert.equal(exercise.current.code,'A');assert.equal(exercise.revealed.length,1);
-console.log('Passed B landmark placement/batch reuse, clear approach, wrong feature/side rejection, ordered unlock, registration and reset.');
+const isolated=new THREE.Scene();isolated.add(wreck);const visibility=new ForestVisibility(isolated,{maxDistance:92}),camera=new THREE.PerspectiveCamera(65,1.7,.05,900);camera.position.set(b.x+7,b.y+2,b.z+8);camera.lookAt(b.x,b.y+1,SECOND_CONTROL.car.z);camera.updateMatrixWorld();visibility.update(camera);assert.equal(wreck.count,1,'The wreck draws nearby');camera.position.set(0,2,0);camera.lookAt(0,2,-10);camera.updateMatrixWorld();visibility.update(camera);assert.equal(wreck.count,0,'The wreck is culled outside fog range');assert.equal(visibility.batches[0].records.length,1);
+console.log('Passed unique wreck placement/single draw, bounded geometry, collision, wrong side rejection, ordered unlock, registration and reset.');
