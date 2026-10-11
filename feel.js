@@ -16,23 +16,10 @@ export class LookSway {
 }
 
 export class MovementFeel {
-  constructor(){this.reset();this.audio=null;this.volume=.35;}
+  constructor(soundscape=null){this.reset();this.soundscape=soundscape;this.volume=.35;}
   reset(){this.phase=0;this.stride=0;this.bob=0;this.roll=0;this.dip=0;this.dipVelocity=0;this.shake=0;this.clock=0;this.fov=0;this.previousSlide=false;this.output={x:0,y:0,pitch:0,roll:0,fov:0};}
-  unlockAudio(){
-    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
-    if(!Audio)return;
-    try{this.audio??=new Audio();this.audio.resume().catch(()=>{});}catch{}
-  }
-  sound(impact=1,landing=false){
-    const context=this.audio;if(!context||context.state!=='running'||this.volume<=0)return;
-    const duration=landing?.16:.085,now=context.currentTime;
-    const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*duration),context.sampleRate),data=buffer.getChannelData(0);
-    for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*6);
-    const source=context.createBufferSource();source.buffer=buffer;
-    const filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=landing?240:650;
-    const gain=context.createGain();gain.gain.setValueAtTime(this.volume*Math.min(1.5,impact)*.7,now);gain.gain.exponentialRampToValueAtTime(.001,now+duration);
-    source.connect(filter);filter.connect(gain);gain.connect(context.destination);source.start();source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};
-  }
+  unlockAudio(){return this.soundscape?.unlock();}
+  sound(impact=1,landing=false){this.soundscape?.footstep(impact,landing,this.volume);}
   landed(velocity){const strength=Math.min(1.6,Math.max(0,(velocity-2)/9));this.dipVelocity-=strength*2.8;this.shake=Math.max(this.shake,strength);this.sound(strength,true);}
   jumped(){this.dipVelocity+=.65;}
   step(dt,player,intensity=1){
