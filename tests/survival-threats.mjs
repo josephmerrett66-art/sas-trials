@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import * as THREE from '../vendor/three.module.js';import {GLTFLoader} from '../vendor/GLTFLoader.js';import {SurvivalThreats} from '../survival-threats.js';
+GLTFLoader.prototype.loadAsync=async function(path){const b=fs.readFileSync(path);return this.parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');};
+const threats=new SurvivalThreats(new THREE.Scene(),[],{sound(){},landed(){}});await threats.ready;assert.equal(threats.pool.length,3);const player={x:0,z:8,yaw:0,config:{size:1.35}};
+threats.step(.1,player);assert.ok(threats.pool.every(e=>e.notice==='patrol'),'no endless chase');const e=threats.first;threats.noise(e.x+15,e.z,32);assert.equal(e.notice,'search');assert.equal(e.alert,22);threats.step(.1,player);assert.equal(e.notice,'search');
+player.x=e.x;player.z=e.z+3;threats.step(.1,player);assert.equal(e.notice,'chase');assert.equal(threats.visibleTo(e,player),true);threats.obstacles.push({x:e.x,z:(e.z+player.z)/2,radius:.5});assert.equal(threats.visibleTo(e,player),false);threats.obstacles.length=0;
+const hp=threats.playerHealth;player.x=100;player.z=100;e.notice='search';e.alert=10;e.search.x=e.x;e.search.z=e.z;threats.step(.1,player);assert.equal(threats.playerHealth,hp,'investigating noise cannot damage a distant player');
+for(const npc of threats.pool)npc.hit(1000);for(let i=0;i<180;i++)threats.step(1/60,player);assert.equal(threats.alive,0);assert.ok(threats.pool.every(e=>e.health===0),'kills never start another wave');threats.reset();assert.equal(threats.playerHealth,100);assert.equal(threats.alive,3);
+console.log('Passed three bounded patrols, gunshot investigation, visual chase, obstacle occlusion, safe damage targeting, no waves and reset.');
+const near=threats.first;const victim={x:near.x,z:near.z+.8,yaw:0,config:{size:1.35}};threats.step(.016,victim);assert.equal(threats.playerHealth,75,'visible close enemy attacks actual player');
+console.log('Passed close-range chase damage.');
+threats.reset();threats.survival={fireLit:true,night:true,safe:p=>Math.hypot(p.x,p.z-8)<5};threats.first.x=0;threats.first.z=12;threats.first.attack=0;threats.step(.1,{x:0,z:8,yaw:0,config:{size:1.35}});assert.equal(threats.playerHealth,100);assert.notEqual(threats.first.notice,'chase','lit camp prevents chase');
+console.log('Passed lit camp refuge against nearby threats.');

@@ -1,0 +1,18 @@
+{
+  "samples": 570,
+  "fps": 59.1,
+  "frameMs": 16.93,
+  "p95Ms": 17.8,
+  "cpuMs": 2.12,
+  "drawCalls": 34,
+  "triangles": 83152,
+  "physicsMs": 0.07,
+  "updateMs": 0.5,
+  "cullMs": 0.34,
+  "renderMs": 1.08,
+  "weapon": "m416",
+  "adapter": "ANGLE (AMD, ANGLE Metal Renderer: AMD Radeon Pro 555X, Unspecified Version)",
+  "renderScale": 1,
+  "gpuMs": 8.795199,
+  "emptyRenderFps": 60
+}

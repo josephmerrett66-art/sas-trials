@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {LookSway} from '../feel.js';
+const sway=new LookSway(),output=sway.output;
+for(let i=0;i<120;i++)sway.step(1/120,1,.7);
+assert.ok(output.roll<0&&output.x<0&&output.weaponYaw>0,'right look leans and weapon lags');
+assert.ok(Math.abs(output.roll)<=.018&&Math.abs(output.x)<=.012&&Math.abs(output.y)<=.008,'subtle bounded motion');
+const fullRoll=output.roll;sway.step(0,1,.7,1,1);assert.ok(Math.abs(output.roll)<Math.abs(fullRoll)*.16,'ADS steadies the camera');
+for(let i=0;i<120;i++)sway.step(1/120,-1,-1);assert.ok(output.roll>0&&output.y<0,'left/vertical look reverses motion');
+for(let i=0;i<120;i++)sway.step(1/120,0,0);assert.ok(Math.abs(output.roll)<.000001,'stick release returns to centre');
+assert.equal(sway.output,output,'no per-frame output allocations');sway.step(.05,1,1,0);assert.ok(Object.values(output).every(v=>v===0),'camera motion setting disables sway');
+const a=new LookSway(),b=new LookSway();for(let i=0;i<60;i++)a.step(1/60,1,0);for(let i=0;i<120;i++)b.step(1/120,1,0);assert.ok(Math.abs(a.output.roll-b.output.roll)<1e-10,'consistent response across frame rates');
+sway.reset();assert.ok(Object.values(output).every(v=>v===0));
+console.log('Passed right-stick lean, bounded motion, ADS reduction, smooth neutral recovery, frame-rate consistency and output reuse.');

@@ -1,0 +1,37 @@
+{
+  "samples": 530,
+  "fps": 29.1,
+  "frameMs": 34.31,
+  "p95Ms": 51.1,
+  "cpuMs": 24.61,
+  "drawCalls": 37,
+  "triangles": 165943,
+  "physicsMs": 4.22,
+  "updateMs": 13.42,
+  "cullMs": 2.98,
+  "renderMs": 3.94,
+  "weapon": "knife",
+  "mode": "survival-knife-hills",
+  "map": {
+    "worldSize": 640,
+    "areaMultiplier": 5.224489795918367,
+    "trees": 4636,
+    "species": {
+      "pine": 1369,
+      "spruce": 1197,
+      "fir": 984,
+      "broadleaf": 467,
+      "snag": 308,
+      "sapling": 311
+    },
+    "grassClumps": 78455,
+    "boulders": 1585,
+    "shrubs": 4998,
+    "obstacles": 6880
+  },
+  "enemies": 3,
+  "adapter": "ANGLE (AMD, ANGLE Metal Renderer: AMD Radeon Pro 555X, Unspecified Version)",
+  "renderScale": 1,
+  "gpuMs": 9.949439,
+  "emptyRenderFps": 31.1
+}

@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import * as THREE from '../vendor/three.module.js';
+import {createForest} from '../forest-scene.js';
+import {ForestVisibility} from '../forest-visibility.js';
+import {RenderBudget} from '../render-budget.js';
+import {FrameMonitor} from '../frame-monitor.js';
+import fs from 'node:fs';
+import {createGroundMaterial} from '../ground-material.js';
+import {createSurfaceMaterial} from '../surface-material.js';
+import {GpuTimer} from '../gpu-timer.js';
+const unsupportedTimer=new GpuTimer({getExtension:()=>null});unsupportedTimer.begin();unsupportedTimer.end();assert.equal(unsupportedTimer.ms,null,'unsupported GPU profiling is harmless');
+const scene=new THREE.Scene();createForest(scene);const visibility=new ForestVisibility(scene),camera=new THREE.PerspectiveCamera(85,1.5,.05,400);camera.position.set(0,2.295,8);
+const original=visibility.batches.reduce((sum,b)=>sum+b.records.length,0);visibility.update(camera);
+assert.ok(visibility.batches.reduce((sum,b)=>sum+b.mesh.count,0)<original*.4,'offscreen instances culled');
+const first=visibility.batches.map(b=>b.mesh.count);camera.rotation.y=Math.PI;visibility.update(camera);
+assert.ok(visibility.batches.some((b,i)=>b.mesh.count!==first[i]),'turning restores instances from original matrices');
+assert.ok(visibility.batches.every(b=>b.mesh.count<=b.records.length));
+for(const {mesh} of visibility.batches)assert.ok(mesh.instanceMatrix.array.every(Number.isFinite));
+for(const kind of ['ground','foliage','bark','rock'])assert.equal(fs.statSync(new URL(`../assets/detail/${kind}.rgba`,import.meta.url)).size,256*256*4,'packed texture byte length');
+for(const mat of [createGroundMaterial(),createSurfaceMaterial('foliage',0x667744)]){const shader={uniforms:{},vertexShader:'#include <common>\n#include <begin_vertex>',fragmentShader:'#include <common>\n#include <color_fragment>'};mat.onBeforeCompile(shader);assert.equal((shader.fragmentShader.match(/texture2D/g)??[]).length,1,'one packed lookup per surface');assert.ok(shader.uniforms.detailNoise.value.generateMipmaps);}
+const changes=[],renderer={setPixelRatio:value=>changes.push(value)},budget=new RenderBudget(renderer);
+for(let i=0;i<1200;i++)budget.sample(33.3,3,true,25);
+assert.ok(changes.length>0);assert.equal(budget.scale,.6,'bounded resolution under sustained GPU pressure');
+const cpuLimited=new RenderBudget(renderer);for(let i=0;i<500;i++)cpuLimited.sample(33.3,20,true,25);assert.equal(cpuLimited.scale,1,'CPU stalls do not blur rendering');
+const cadenceLimited=new RenderBudget(renderer);for(let i=0;i<1000;i++)cadenceLimited.sample(33.3,2,true,4);assert.equal(cadenceLimited.scale,1,'browser cadence limits do not lower visual quality');
+const monitor=new FrameMonitor();for(let i=0;i<200;i++)monitor.sample(i*1000/60,2,{calls:30,triangles:50000});assert.equal(Math.round(monitor.summary().fps),60);assert.equal(monitor.summary().cpuMs,2);
+console.log('Passed forest culling/restoration, finite instance matrices, cached mipmapped detail, render budget bounds and frame statistics.');
+// Fog culling retains geometry crossing the visible boundary, but rejects fully hidden objects.
+const fogScene=new THREE.Scene(),fogMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(4,4,4),new THREE.MeshBasicMaterial(),3),matrix=new THREE.Matrix4();fogMesh.name='test trunks';
+for(const [i,z] of [[0,-10],[1,-48],[2,-100]]){matrix.makeTranslation(0,0,z);fogMesh.setMatrixAt(i,matrix);}fogScene.add(fogMesh);
+const fogVisibility=new ForestVisibility(fogScene,{maxDistance:47}),fogCamera=new THREE.PerspectiveCamera(85,1,.05,400);fogVisibility.update(fogCamera);assert.equal(fogMesh.count,2,'retain intersecting bounds, remove fully fogged geometry');fogVisibility.restoreAll();assert.equal(fogMesh.count,3);
+let issued=0;const fakeGL={getExtension:()=>({GPU_DISJOINT_EXT:1,TIME_ELAPSED_EXT:2}),getParameter:()=>false,getQueryParameter:(_,kind)=>kind===3?true:4e6,QUERY_RESULT_AVAILABLE:3,QUERY_RESULT:4,createQuery:()=>++issued,beginQuery:()=>{},endQuery:()=>{},deleteQuery:()=>{}};
+const sustained=new GpuTimer(fakeGL);for(let i=0;i<1800;i++){sustained.begin();sustained.end();}assert.equal(issued,30,'GPU timer samples throughout a run');assert.equal(sustained.ms,4);
+console.log('Passed fog-boundary retention and sustained GPU measurements.');
+const highRes=new RenderBudget(renderer);highRes.resize(1680,962,2);assert.ok(1680*962*highRes.scale**2<=1200001,'pixel budget reserves GPU headroom');assert.ok(highRes.scale>.8,'moderate resolution reduction');highRes.resize(800,600,1);assert.equal(highRes.maxScale,1,'smaller windows can recover native resolution');
+const tiles=visibility.terrainTiles;assert.ok(tiles.length>100,'large terrain is tiled');const nearVisibility=new ForestVisibility(scene,{maxDistance:92});nearVisibility.update(camera);assert.ok(tiles.filter(t=>t.visible).length<tiles.length*.15,'most terrain tiles skipped');

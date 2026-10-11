@@ -1,0 +1,39 @@
+{
+  "samples": 570,
+  "fps": 39.7,
+  "frameMs": 25.2,
+  "p95Ms": 34.1,
+  "cpuMs": 3.86,
+  "drawCalls": 35,
+  "triangles": 166995,
+  "physicsMs": 0.06,
+  "updateMs": 1.71,
+  "cullMs": 1.12,
+  "renderMs": 0.94,
+  "weapon": "knife",
+  "mode": "eternal-night",
+  "torch": true,
+  "dark": true,
+  "map": {
+    "worldSize": 640,
+    "areaMultiplier": 5.224489795918367,
+    "trees": 4636,
+    "species": {
+      "pine": 1369,
+      "spruce": 1197,
+      "fir": 984,
+      "broadleaf": 467,
+      "snag": 308,
+      "sapling": 311
+    },
+    "grassClumps": 78455,
+    "boulders": 1585,
+    "shrubs": 4998,
+    "obstacles": 6880
+  },
+  "enemies": 3,
+  "adapter": "ANGLE (AMD, ANGLE Metal Renderer: AMD Radeon Pro 555X, Unspecified Version)",
+  "renderScale": 1,
+  "gpuMs": 8.280799,
+  "emptyRenderFps": 37.8
+}

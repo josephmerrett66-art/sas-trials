@@ -1,0 +1,86 @@
+import {ForestWeather} from './weather.js?v=weather-4';
+import {riverInspection} from './drainage.js?v=gullies-1';
+import {mainTrail} from './landmark-routes.js?v=gullies-1';
+import {ValleyRiver} from './river.js?v=gullies-1';
+import * as THREE from './vendor/three.module.js';
+import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
+import {Controller,defaults} from './controller.js';
+import {GamepadInput} from './gamepad.js';
+import {createForest,collideForest} from './forest.js?v=gullies-1';
+import {MovementFeel,LookSway} from './feel.js';
+import {PlayerLean,leanInput} from './lean.js';
+import {loadDetailAtlases} from './detail-atlas.js';
+import {ForestVisibility} from './forest-visibility.js';
+import {RenderBudget} from './render-budget.js';
+import {FrameMonitor} from './frame-monitor.js';
+import {GpuTimer} from './gpu-timer.js';
+import {ForestTorch,installTorchOptics} from './torch.js';
+import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=gullies-1';
+import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=gullies-1';
+import {HeldNavigation} from './held-navigation.js?v=compass-2';
+
+const params=new URLSearchParams(location.search),benchmark=params.has('benchmark');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9cbdd0);scene.fog=new THREE.Fog(0x9cbdd0,35,90);
+const camera=new THREE.PerspectiveCamera(85,innerWidth/innerHeight,.05,900);camera.rotation.order='YXZ';scene.add(camera);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);document.querySelector('#world').appendChild(renderer.domElement);
+const renderBudget=new RenderBudget(renderer);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);
+const hemisphere=new THREE.HemisphereLight(0xd9edff,0x5d6240,1.2),sunlight=new THREE.DirectionalLight(0xffe0ac,1.7);sunlight.position.set(-30,50,20);scene.add(hemisphere,sunlight);
+const river=new ValleyRiver(scene);if(benchmark&&params.get('river')==='off')river.group.visible=false;
+const obstacles=createForest(scene),forestVisibility=new ForestVisibility(scene,{maxDistance:92});
+for(const name of ['Faceted sky clouds','Distant mountain silhouettes'])scene.getObjectByName(name).visible=false;
+for(const object of scene.children)if(object.isMesh){object.updateMatrixWorld(true);object.matrixAutoUpdate=false;object.matrixWorldAutoUpdate=false;}
+const points=makeCheckpoints(obstacles),checkpointPosts=addCheckpointPosts(scene,points);
+const exercise=new NavigationExercise(points),view=new NavigationView(exercise);
+const heldNavigation=new HeldNavigation(camera,view.chart);
+const player=new Controller(terrainHeight,WORLD_SIZE/2-5),keys=new Set(),movementInput=new Set(),gamepad=new GamepadInput();
+const feel=new MovementFeel(),lookSway=new LookSway(),lean=new PlayerLean();
+const hint=document.querySelector('.hint'),footer=document.querySelector('footer'),hud={bunny:document.querySelector('#bunny'),fps:document.querySelector('#fps')};
+let active=false,locked=false,controllerMode=false,started=false,accumulator=0,last=performance.now(),lastFrame=last,hudTime=0,frameAverage=1/60;
+const play=document.querySelector('#play');play.disabled=true;hint.textContent='Preparing navigation chart…';await loadDetailAtlases();play.disabled=false;hint.textContent='Mouse + keyboard or Xbox controller';
+installTorchOptics(scene);const torch=new ForestTorch(camera),torchButton=document.querySelector('#torch-toggle'),nightSetting=document.querySelector('#night-mode');
+const weather=new ForestWeather(scene,camera,params.get('weather')??'auto');
+const weatherSetting=document.querySelector('#weather-mode');weatherSetting.value=weather.state.mode;weatherSetting.onchange=()=>weather.state.setMode(weatherSetting.value);
+document.querySelector('#weather-volume').oninput=e=>weather.volume=Number(e.target.value);document.querySelector('#lightning-mode').onchange=e=>weather.lightning=e.target.checked;
+function syncTorch(){torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.textContent=`TORCH · ${torch.on?'ON':'OFF'}`;}
+function setNightMode(night,persist=true){nightSetting.checked=night;torch.setDark(night);sunlight.intensity=night?0:1.7;hemisphere.intensity=night?0:1.2;scene.background.set(night?0:0x9cbdd0);scene.fog.color.copy(scene.background);scene.fog.near=night?22:35;scene.fog.far=night?45:90;forestVisibility.maxDistance=scene.fog.far+2;forestVisibility.previousPosition.set(Infinity,Infinity,Infinity);torchButton.hidden=!night;if(persist)try{localStorage.setItem('navigation-night',String(night));}catch{}}
+let night=false;try{night=localStorage.getItem('navigation-night')==='true';}catch{}setNightMode(params.get('lighting')?params.get('lighting')==='night':night,false);syncTorch();
+nightSetting.onchange=()=>setNightMode(nightSetting.checked);torchButton.onclick=()=>{torch.toggle();syncTorch();};
+function resetRun(){player.reset();player.x=START.x;player.z=START.z;player.y=terrainHeight(player.x,player.z);feel.reset();lookSway.reset();lean.reset();exercise.reset();view.reset();keys.clear();accumulator=0;view.toggle('assignment');}
+resetRun();view.close();
+function setActive(value){active=value;document.body.classList.toggle('playing',value);keys.clear();player.jumpBuffer=0;accumulator=0;if(value){feel.unlockAudio();weather.unlockAudio(feel.audio);if(!started){started=true;if(view.panel!=='assignment')view.toggle('assignment');}}play.firstChild.textContent='RESUME EXERCISE ';}
+function pause(){setActive(false);if(locked)document.exitPointerLock();}
+function readPad(){try{return gamepad.read(navigator.getGamepads?.()??[],player.config.deadzone,player.config.stickCurve);}catch{return null;}}
+const fields=[['size','Player size',.7,2.2,.05],['walk','Walk speed',2,10,.1],['sprint','Sprint speed',5,16,.1],['acceleration','Acceleration',10,90,1],['braking','Braking',5,80,1],['directionGrip','Direction grip',0,24,1],['airControl','Air control',0,25,.5],['jump','Jump height',.5,2.5,.05],['sensitivity','Mouse sensitivity',.0005,.005,.0001],['fov','Field of view',65,110,1],['stickSensitivity','Stick look speed',.5,5,.1],['stickCurve','Stick precision curve',1,2.4,.1],['deadzone','Stick dead zone',.05,.35,.01],['juice','Camera motion',0,2,.1],['footstepVolume','Footstep volume',0,1,.05]];
+for(const [key,name,min,max,step] of fields){const label=document.createElement('label');label.className='setting';label.innerHTML=`${name}<output></output><input type="range" min="${min}" max="${max}" step="${step}" value="${player.config[key]}" aria-label="${name}">`;const input=label.querySelector('input'),out=label.querySelector('output');const sync=()=>{if(key==='size'){player.setSize(Number(input.value));collideForest(player,obstacles);}else player.config[key]=Number(input.value);out.value=key==='sensitivity'?(Number(input.value)*1000).toFixed(1):Number(input.value).toFixed((key==='jump'||key==='deadzone'||key==='size'||key==='adsSensitivity')?2:1)+(key==='size'?'×':'');};input.addEventListener('input',sync);sync();document.querySelector('#sliders').appendChild(label);}
+document.querySelector('#reset').onclick=()=>{player.setSize(defaults.size);Object.assign(player.config,defaults);document.querySelectorAll('.setting input').forEach((el,i)=>{el.value=defaults[fields[i][0]];el.dispatchEvent(new Event('input'));});};
+play.onclick=async()=>{if(readPad()){controllerMode=true;setActive(true);return;}controllerMode=false;try{await renderer.domElement.requestPointerLock();}catch{hint.textContent='Mouse capture needs a desktop browser. Xbox controller is also supported.';}};
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===renderer.domElement;if(locked)setActive(true);else if(!controllerMode)setActive(false);});
+document.addEventListener('mousemove',e=>{if(!locked||view.blocking)return;player.yaw-=e.movementX*player.config.sensitivity;player.pitch=THREE.MathUtils.clamp(player.pitch-e.movementY*player.config.sensitivity,-Math.PI/2+.01,Math.PI/2-.01);});
+function interact(){if(exercise.interact(player))view.update(player);}
+function tool(name){if(name==='interact')interact();else view.toggle(name);keys.clear();}
+for(const button of document.querySelectorAll('[data-tool]'))button.onclick=()=>tool(button.dataset.tool);
+for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>view.close();
+for(const button of document.querySelectorAll('[data-restart]'))button.onclick=resetRun;
+document.addEventListener('keydown',e=>{if(e.code==='Escape'){pause();return;}if(e.code==='KeyR'&&!active&&!e.repeat){resetRun();return;}if(!active||e.target.matches('input'))return;keys.add(e.code);if(['Space','KeyM','KeyK','KeyJ'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='KeyM')tool('map');if(e.code==='KeyK')tool('compass');if(e.code==='KeyJ')tool('assignment');if(e.code==='KeyG')interact();if(e.code==='KeyL'){torch.toggle();syncTorch();}if(e.code==='Space'&&!view.blocking)player.jumpBuffer=player.time+.12;});
+document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);});
+const graphics=renderer.getContext(),gpuTimer=new GpuTimer(graphics),adapterExtension=graphics.getExtension('WEBGL_debug_renderer_info'),adapter=adapterExtension?graphics.getParameter(adapterExtension.UNMASKED_RENDERER_WEBGL):graphics.getParameter(graphics.RENDERER),frameMonitor=new FrameMonitor();
+let benchmarkStart=0,benchmarkDone=false,benchmarkWarm=false,benchmarkProbe=false,benchmarkResult=null;
+const benchmarkOutput=document.createElement('output');benchmarkOutput.id='performance-results';benchmarkOutput.hidden=!benchmark;
+if(benchmark){benchmarkOutput.style='position:fixed;bottom:12px;left:12px;color:white;background:#000c;padding:12px;font:13px monospace;z-index:100;max-width:460px;white-space:pre-wrap';benchmarkOutput.textContent='Benchmark: walking, turning, jumping and compass inspection…';document.body.appendChild(benchmarkOutput);setActive(true);view.close();if(params.get('equipment')!=='stowed')view.toggle('compass');}
+// Explicit test harness only; absent from normal gameplay.
+if(params.has('navtest')){const panel=document.createElement('div');panel.id='nav-test';panel.style='position:fixed;top:5px;left:5px;z-index:120';const riverButton=document.createElement('button');riverButton.textContent='Test river bank';riverButton.onclick=()=>{view.close();player.x=riverInspection.x;player.z=riverInspection.z;player.y=terrainHeight(player.x,player.z);player.yaw=riverInspection.yaw;player.pitch=-.3;exercise.previous=null;};panel.appendChild(riverButton);for(const [label,z,x] of [['Test river fork',riverInspection.z,riverInspection.x],['Test trail fork',-360,mainTrail.center(-360)]]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{view.close();player.x=x;player.z=z;player.y=terrainHeight(x,z);player.yaw=label==='Test trail fork'?Math.PI:riverInspection.yaw;player.pitch=-.25;exercise.previous=null;};panel.appendChild(b);}for(const p of points){const b=document.createElement('button');b.textContent=`Test post ${p.code}`;b.onclick=()=>{view.close();player.x=p.x;player.z=p.z+1.5;player.y=terrainHeight(player.x,player.z);exercise.previous=null;};panel.appendChild(b);}for(const [label,yaw] of [['Test face north',0],['Test face east',-Math.PI/2],['Test face south',Math.PI],['Test face west',Math.PI/2]]){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{view.close();player.yaw=yaw;player.pitch=-1.05;view.equipmentHeld=true;};panel.appendChild(b);}for(const [text,pitch] of [['Test look down',-1.05],['Test look forward',0]]){const b=document.createElement('button');b.textContent=text;b.onclick=()=>{view.close();player.pitch=pitch;};panel.appendChild(b);}const hide=document.createElement('button');hide.textContent='Hide test controls';hide.onclick=()=>panel.hidden=true;panel.appendChild(hide);document.body.appendChild(panel);controllerMode=true;setActive(true);}
+renderer.info.autoReset=false;scene.matrixAutoUpdate=false;scene.matrixWorldAutoUpdate=false;
+renderer.setAnimationLoop(now=>{
+ if(document.hidden){last=lastFrame=now;return;}const cpuStart=performance.now(),frameMs=now-lastFrame;renderer.info.reset();
+ if(benchmark&&!benchmarkDone){benchmarkStart||=now;const elapsed=(now-benchmarkStart)/1000;player.yaw=Math.sin(elapsed*.25)*1.4;player.pitch=-.04;if(params.has('rivertest')){player.x=riverInspection.x;player.z=riverInspection.z;player.y=terrainHeight(player.x,player.z);player.yaw=riverInspection.yaw;player.pitch=-.3;}keys.add('KeyW');if(elapsed%3<.15)player.jumpBuffer=player.time+.12;if(elapsed>=10&&!benchmarkWarm){benchmarkWarm=true;frameMonitor.frames=[];}if(elapsed>=30&&!benchmarkProbe){benchmarkProbe=true;pause();benchmarkResult={...frameMonitor.summary(),mode:'navigation',weather:weather.state.current,night:torch.dark,enemies:0,adapter,renderScale:renderBudget.scale,gpuMs:gpuTimer.ms,viewport:{width:innerWidth,height:innerHeight}};frameMonitor.frames=[];}if(elapsed>=36){benchmarkDone=true;benchmarkProbe=false;benchmarkOutput.textContent=JSON.stringify({...benchmarkResult,emptyRenderFps:frameMonitor.summary().fps},null,2);benchmarkOutput.dataset.result=benchmarkOutput.textContent;}}
+ const dt=Math.min((now-last)/1000,.05);last=now;const pad=benchmark?null:readPad();
+ if(controllerMode&&!pad&&!params.has('navtest')){pause();controllerMode=false;hint.textContent='Controller disconnected. Reconnect or use mouse + keyboard.';}
+ if(pad){if(!active&&pad.respawn)resetRun();if(pad.pause){if(active)pause();else{controllerMode=true;setActive(true);}}else if(!active&&pad.jumpPressed){controllerMode=true;setActive(true);}else if(active){if(pad.previousPressed)tool('compass');if(pad.nextPressed)tool('assignment');if(pad.mapPressed)tool('map');if(pad.reloadPressed)interact();if(pad.jumpPressed&&!view.blocking)player.jumpBuffer=player.time+.12;}}
+ const physicsStart=performance.now();
+ if(active&&!view.blocking){if(pad){player.yaw-=pad.look.x*player.config.stickSensitivity*dt;player.pitch=THREE.MathUtils.clamp(player.pitch-pad.look.y*player.config.stickSensitivity*dt,-Math.PI/2+.01,Math.PI/2-.01);}movementInput.clear();for(const key of keys)movementInput.add(key);if(pad){if(pad.jump)movementInput.add('Space');if(pad.crouch)movementInput.add('KeyC');if(pad.sprint)movementInput.add('ShiftLeft');}accumulator+=dt;while(accumulator>=1/120){const grounded=player.grounded,fall=-player.vy;player.step(1/120,movementInput,hud.bunny.checked,pad?.move);collideForest(player,obstacles);if(!grounded&&player.grounded)feel.landed(fall);if(grounded&&!player.grounded)feel.jumped();feel.step(1/120,player,player.config.juice);accumulator-=1/120;}exercise.step(dt,player);}else {player.vx=player.vz=0;feel.step(0,player,player.config.juice);exercise.messageTime=Math.max(0,exercise.messageTime-dt);}
+ const physicsEnd=performance.now(),motion=feel.output,lookMotion=lookSway.step(dt,active&&!view.blocking?(pad?.look.x??0):0,active&&!view.blocking?(pad?.look.y??0):0,player.config.juice,0),leanMotion=lean.step(dt,active&&!view.blocking?leanInput(keys,pad):0,player,obstacles);
+ camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);river.step(active?dt:0);heldNavigation.update(player,active&&view.equipmentHeld&&!view.blocking);torch.step(active?dt:0,player);camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,torch.dark,torch.on,sunlight,hemisphere,forestVisibility);
+ frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
+ const updateEnd=performance.now();for(const post of checkpointPosts){const dx=post.position.x-camera.position.x,dz=post.position.z-camera.position.z;post.visible=dx*dx+dz*dz<(scene.fog.far+4)**2;}scene.updateMatrixWorld();forestVisibility.update(camera,true);const cullEnd=performance.now();gpuTimer.begin();if(benchmarkProbe)renderer.clear();else renderer.render(scene,camera);gpuTimer.end();const cpu=performance.now()-cpuStart;frameMonitor.sample(now,cpu,renderer.info.render,{physicsMs:physicsEnd-physicsStart,updateMs:updateEnd-physicsEnd,cullMs:cullEnd-updateEnd,renderMs:performance.now()-cullEnd});renderBudget.sample(frameMs,cpu,true,gpuTimer.ms);
+});

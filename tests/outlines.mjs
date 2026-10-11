@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import * as THREE from '../vendor/three.module.js';
+import {installOutlines} from '../outlines.js';
+const scene=new THREE.Scene(),g=new THREE.BoxGeometry(),m=new THREE.MeshLambertMaterial();let hook=false;m.onBeforeCompile=()=>{hook=true;};
+const a=new THREE.InstancedMesh(g,m,2),b=new THREE.Mesh(g,m);scene.add(a,b);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(),m);floor.name='Faceted forest floor';scene.add(floor);
+installOutlines(scene);assert.equal(a.geometry,b.geometry);assert.equal(a.material,b.material);assert.equal(floor.material,m);assert.equal(a.count,2);assert.equal(a.geometry.attributes.position.count,g.index.count);
+const flags=a.geometry.attributes.inkEdges.array;assert.ok(flags.includes(0),'coplanar face diagonals omitted');assert.ok(flags.includes(1),'box creases retained');
+const shader={vertexShader:'#include <begin_vertex>',fragmentShader:'#include <opaque_fragment>'};a.material.onBeforeCompile(shader);assert.ok(hook);assert.ok(shader.fragmentShader.includes('fwidth(vInkBary)'));assert.equal(scene.children.length,3);
+console.log('Passed geometry/material reuse, preserved instancing and shader hooks, omitted coplanar diagonals, retained creases and unchanged object count.');

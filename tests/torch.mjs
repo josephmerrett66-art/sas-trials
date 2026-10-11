@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import * as THREE from '../vendor/three.module.js';
+import {ForestTorch,installTorchOptics} from '../torch.js';
+const camera=new THREE.PerspectiveCamera(),torch=new ForestTorch(camera);
+const player={yaw:0,pitch:0,vx:0,vz:0,travel:0};
+torch.step(1/60,player);torch.toggle();for(let i=0;i<90;i++)torch.step(1/60,player);assert.ok(torch.light.intensity<.001);
+torch.toggle();for(let i=0;i<90;i++)torch.step(1/60,player);assert.ok(torch.light.intensity>200);
+player.yaw=.2;torch.step(1/60,player);assert.ok(torch.lagX>0&&torch.lagX<.7);for(let i=0;i<120;i++)torch.step(1/60,player);assert.ok(torch.lagX<.001);
+player.vx=6;player.travel=5;torch.step(1/60,player);assert.ok(Number.isFinite(torch.target.position.x));
+camera.rotation.y=1.2;camera.updateMatrixWorld(true);const beam=torch.target.getWorldPosition(new THREE.Vector3()).sub(torch.light.getWorldPosition(new THREE.Vector3())).normalize();assert.ok(beam.dot(camera.getWorldDirection(new THREE.Vector3()))>.99);
+assert.equal(camera.children.length,2);assert.equal(torch.light.castShadow,false);assert.ok(torch.light.decay>1.5);
+const scene=new THREE.Scene(),material=new THREE.MeshLambertMaterial();let preserved=false;material.onBeforeCompile=()=>{preserved=true;};scene.add(new THREE.Mesh(new THREE.BoxGeometry(),material));installTorchOptics(scene);
+const shader={vertexShader:'#include <lights_pars_begin>',fragmentShader:'#include <lights_pars_begin>'};material.onBeforeCompile(shader);assert.ok(preserved);assert.ok(shader.fragmentShader.includes('smoothstep( .955, .997, angleCos )'));assert.ok(!shader.fragmentShader.includes('beamScreen'));assert.ok(!shader.fragmentShader.includes('torchClip'));
+console.log('Passed switch fade, bounded hand lag and recovery, forward aim, distance falloff, single light, preserved material hooks and reflector profile without a screen mask.');
+torch.setDark(false);torch.step(1/60,player);assert.equal(torch.light.intensity,0);assert.equal(torch.darkness,0);torch.setDark(true);torch.step(1/60,player);assert.ok(torch.light.intensity>200);console.log('Passed daylight torch suppression and night restoration.');
