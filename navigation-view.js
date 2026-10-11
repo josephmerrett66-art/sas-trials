@@ -1,13 +1,13 @@
 import {trails} from './landmark-routes.js?v=no-river-1';
 import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
-import {START,gridReference,coordinates} from './navigation.js?v=first-control-1';
+import {START,gridReference,coordinates} from './navigation.js?v=second-control-1';
 
 export function addCheckpointPosts(scene,points){
  const groups=[];
  const timber=new THREE.MeshLambertMaterial({color:0x776046}),postGeometry=new THREE.BoxGeometry(.18,1.3,.18),boardGeometry=new THREE.BoxGeometry(.65,.5,.12);
  for(const point of points){
-  const group=new THREE.Group();group.position.set(point.x,point.y,point.z);group.name=`Checkpoint ${point.code}`;if(point.feature)group.rotation.y=Math.PI/2;
+  const group=new THREE.Group();group.position.set(point.x,point.y,point.z);group.name=`Checkpoint ${point.code}`;if(point.feature)group.rotation.y=point.postRotation??Math.PI/2;
   const post=new THREE.Mesh(postGeometry,timber);post.position.y=.65;group.add(post);
   const board=new THREE.Mesh(boardGeometry,timber);board.position.y=1.5;group.add(board);
   const label=document.createElement('canvas');label.width=128;label.height=96;const ctx=label.getContext('2d');ctx.fillStyle='#d3be8b';ctx.fillRect(0,0,128,96);ctx.fillStyle='#29281f';ctx.textAlign='center';ctx.font='bold 62px monospace';ctx.fillText(point.code,64,69);

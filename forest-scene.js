@@ -1,3 +1,4 @@
+import {SECOND_CONTROL,secondControlClearing,isSecondControlRock,isSecondControlLog,isSecondControlCollider} from './second-control.js?v=1';
 import {FIRST_CONTROL,firstControlClearing,isControlBoulder} from './first-control.js?v=1';
 import {trailClearance,trailCenter,trails} from './landmark-routes.js?v=no-river-1';
 import {tileTerrain} from './terrain-tiles.js';
@@ -96,7 +97,7 @@ export function createForest(scene){
   batch('Trunk bark knots',new THREE.IcosahedronGeometry(1,0),material(0x60432c),knots,(k,o)=>{o.position.set(k.x,k.y,k.z);o.scale.set(k.size,k.size*1.5,k.size);});
   const rocks=[];for(let i=0;i<Math.round(1600*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z,4.4))continue;rocks.push({x,z,size:.6+random()*2.8,rotation:random()*6,shade:.8+random()*.2});}
   for(const [x,z,size] of [[-4,-3,2.1],[5,-11,2.4],[-7,-23,3],[8,9,2.5]])rocks.push({x,z,size,rotation:random()*6,shade:1});
-  rocks.push(FIRST_CONTROL.north,FIRST_CONTROL.south);
+  rocks.push(FIRST_CONTROL.north,FIRST_CONTROL.south,SECOND_CONTROL.rock);
   batch('Large faceted boulders',new THREE.IcosahedronGeometry(1,0),material(0x777d78),rocks,(r,o)=>{o.position.set(r.x,r.size*.34,r.z);o.rotation.set(.15,r.rotation,.1);o.scale.set(r.size,r.size*.65,r.size*.8);});
   rocks.forEach(r=>obstacles.push({x:r.x,z:r.z,baseY:terrainHeight(r.x,r.z),radius:r.size*.85,height:r.size}));
   const pebbles=[];for(let i=0;i<Math.round(2400*lengthScale);i++){const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),x=route.center(z)+(random()-.5)*8;pebbles.push({x,z,size:.03+random()*.19,rotation:random()*6,shade:.7+random()*.3});}
@@ -118,6 +119,7 @@ export function createForest(scene){
   batch('Pale cut wood faces',new THREE.CircleGeometry(1,7),material(0xb28d58),stumps,(s,o)=>{o.position.set(s.x,s.height+.003,s.z);o.rotation.x=-Math.PI/2;o.scale.setScalar(s.size*.8);},true);
   stumps.forEach(s=>obstacles.push({x:s.x,z:s.z,baseY:terrainHeight(s.x,s.z),radius:s.size,height:s.height}));
   const logs=[];for(let i=0;i<Math.round(140*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z,7))continue;logs.push({x,z,rotation:random()*6,length:2.3+random()*2,radius:.18+random()*.17});}
+  logs.push(SECOND_CONTROL.log);
   batch('Fallen tree logs',new THREE.CylinderGeometry(1,1,1,7),material(0x6d5035),logs,(l,o)=>{o.position.set(l.x,l.radius,l.z);o.rotation.set(Math.PI/2,0,l.rotation);o.scale.set(l.radius,l.length,l.radius);});
   logs.forEach(l=>{for(let i=-1;i<=1;i++)obstacles.push({x:l.x-Math.sin(l.rotation)*i*l.length/3,z:l.z+Math.cos(l.rotation)*i*l.length/3,baseY:terrainHeight(l.x,l.z),radius:l.radius+.15,height:l.radius*2});});
   // Fog layers and polygonal mountain silhouettes frame the forest beyond the play area.
@@ -130,9 +132,10 @@ export function createForest(scene){
   for(const mesh of scene.children){if(!mesh.isInstancedMesh||/clouds|mountain/.test(mesh.name))continue;
    let kept=0;for(let i=0;i<mesh.count;i++){const x=mesh.instanceMatrix.array[i*16+12],z=mesh.instanceMatrix.array[i*16+14];
     if(firstControlClearing(x,z)&&!(mesh.name==='Large faceted boulders'&&isControlBoulder(x,z)))continue;
+    if(secondControlClearing(x,z)&&!(mesh.name==='Large faceted boulders'&&isSecondControlRock(x,z))&&!(mesh.name==='Fallen tree logs'&&isSecondControlLog(x,z)))continue;
     if(kept!==i){mesh.instanceMatrix.array.copyWithin(kept*16,i*16,(i+1)*16);if(mesh.instanceColor)mesh.instanceColor.array.copyWithin(kept*3,i*3,(i+1)*3);}kept++;
    }mesh.count=kept;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.computeBoundingSphere();
   }
   scene.userData.forestStats={worldSize:WORLD_SIZE,areaMultiplier:WORLD_SIZE**2/280**2,expansionFromNavigation:WORLD_SIZE**2/640**2,trees:trees.length,species:Object.fromEntries(species.map((name,i)=>[name,trees.filter(t=>t.species===i).length])),grassClumps:grass.length,boulders:rocks.length,shrubs:bushes.length,obstacles:obstacles.length};
-  return obstacles.filter(o=>!firstControlClearing(o.x,o.z)||isControlBoulder(o.x,o.z));
+  return obstacles.filter(o=>(!firstControlClearing(o.x,o.z)||isControlBoulder(o.x,o.z))&&(!secondControlClearing(o.x,o.z)||isSecondControlCollider(o.x,o.z)));
 }
