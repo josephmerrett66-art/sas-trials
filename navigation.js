@@ -1,5 +1,5 @@
-import {CONTROL_LANDMARKS} from './control-landmarks.js?v=1';
-import {SECOND_CONTROL} from './second-control.js?v=wreck-1';
+import {CONTROL_LANDMARKS} from './control-landmarks.js?v=irregular-route-1';
+import {SECOND_CONTROL} from './second-control.js?v=irregular-route-1';
 import {FIRST_CONTROL} from './first-control.js?v=1';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
 export const START={x:0,z:12};
@@ -8,7 +8,7 @@ export function gridReference(x,z,size=WORLD_SIZE){const cell=size/8;return Stri
 export function makeCheckpoints(obstacles=[]){
  const controls=[
   {post:FIRST_CONTROL.post,feature:FIRST_CONTROL.north,attack:FIRST_CONTROL.attack,title:'Twin boulders',postRotation:Math.PI/2,controlDescription:'Northern boulder of the pair, east side.',description:'Follow the valley trail north to its west-facing bend in grid D1. Use the bend as your approach point, then head northwest to the two boulders. Identify the northern rock and check its east side for post A. Match the letter before registering.'},
-  {post:SECOND_CONTROL.post,feature:SECOND_CONTROL.car,title:'Burned-out car',postRotation:0,controlDescription:'Burned-out car, rear (south) end.',description:'Navigate to grid H1 and search for the rusty burned-out car. Its empty windows, buckled bonnet and scorched interior make it unlike anything else in the forest. Find post B behind the rear bumper, at the south end of the wreck. Match the letter before registering.'},
+  {post:SECOND_CONTROL.post,feature:SECOND_CONTROL.car,title:'Burned-out car',postRotation:0,controlDescription:'Burned-out car, rear (south) end.',description:'Work southeast from A into grid F3. Cross the valley trail, then check both coordinates before searching for the rusty burned-out car. Its empty windows, buckled bonnet and scorched interior make it unlike anything else in the forest. Find post B behind the rear bumper, at the south end of the wreck. Match the letter before registering.'},
   ...CONTROL_LANDMARKS.map(c=>({...c,title:c.name,description:c.description+' Match the letter before registering.'}))
  ];
  return controls.map((control,i)=>{const {post,kind,radius,height,name,...clue}=control;return {...clue,code:String.fromCharCode(65+i),...post,y:terrainHeight(post.x,post.z),grid:gridReference(post.x,post.z)};});

@@ -1,0 +1,61 @@
+{
+  "straightLineDistance": 6513,
+  "legs": [
+    {
+      "from": "Start",
+      "to": "A",
+      "grid": "C1",
+      "distance": 673,
+      "bearing": 342
+    },
+    {
+      "from": "A",
+      "to": "B",
+      "grid": "F3",
+      "distance": 710,
+      "bearing": 129
+    },
+    {
+      "from": "B",
+      "to": "C",
+      "grid": "E7",
+      "distance": 588,
+      "bearing": 202
+    },
+    {
+      "from": "C",
+      "to": "D",
+      "grid": "B5",
+      "distance": 641,
+      "bearing": 294
+    },
+    {
+      "from": "D",
+      "to": "E",
+      "grid": "F7",
+      "distance": 878,
+      "bearing": 119
+    },
+    {
+      "from": "E",
+      "to": "F",
+      "grid": "C3",
+      "distance": 947,
+      "bearing": 322
+    },
+    {
+      "from": "F",
+      "to": "G",
+      "grid": "G2",
+      "distance": 800,
+      "bearing": 74
+    },
+    {
+      "from": "G",
+      "to": "H",
+      "grid": "B7",
+      "distance": 1275,
+      "bearing": 226
+    }
+  ]
+}

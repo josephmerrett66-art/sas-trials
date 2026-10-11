@@ -6,7 +6,7 @@ import {makeCheckpoints,NavigationExercise} from '../navigation.js';
 import {terrainHeight} from '../terrain.js';
 import {ForestVisibility} from '../forest-visibility.js';
 const scene=new THREE.Scene(),obstacles=createForest(scene),points=makeCheckpoints(obstacles),b=points[1],exercise=new NavigationExercise(points);
-assert.equal(b.grid,'H1');assert.equal(b.controlDescription,'Burned-out car, rear (south) end.');
+assert.equal(b.grid,'F3');assert.equal(b.controlDescription,'Burned-out car, rear (south) end.');
 assert.equal(b.x,SECOND_CONTROL.car.x);assert(b.z>SECOND_CONTROL.car.z);
 assert.equal(obstacles.filter(o=>secondControlClearing(o.x,o.z)).length,3,'Only the wreck colliders remain locally');
 const wreck=scene.getObjectByName('Burned-out rusted car');assert(wreck?.isInstancedMesh);assert.equal(wreck.count,1);assert(!Array.isArray(wreck.material));assert.equal(wreck.geometry.groups.length,0,'Single merged draw');assert(wreck.material.vertexColors);assert(!wreck.castShadow);assert(!wreck.receiveShadow);
