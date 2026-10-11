@@ -1,0 +1,50 @@
+[
+  {
+    "direction": "north",
+    "bearing": "000° · N",
+    "dial": "transform: rotate(0deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "east",
+    "bearing": "090° · E",
+    "dial": "transform: rotate(-90deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "south",
+    "bearing": "180° · S",
+    "dial": "transform: rotate(-180deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "west",
+    "bearing": "270° · W",
+    "dial": "transform: rotate(-270deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "northeast",
+    "bearing": "045° · NE",
+    "dial": "transform: rotate(-405deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "southeast",
+    "bearing": "135° · SE",
+    "dial": "transform: rotate(-495deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "southwest",
+    "bearing": "225° · SW",
+    "dial": "transform: rotate(-585deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "northwest",
+    "bearing": "315° · NW",
+    "dial": "transform: rotate(-675deg); transition: transform 0.033333s linear;"
+  },
+  {
+    "direction": "straight up after northwest",
+    "bearing": "315° · NW"
+  },
+  {
+    "direction": "straight down after northwest",
+    "bearing": "315° · NW"
+  }
+]

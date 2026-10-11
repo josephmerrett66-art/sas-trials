@@ -13,14 +13,13 @@ await rig.ready;
 const draws=[];rig.root.traverse(o=>{if(o.isMesh)draws.push(o);});assert.equal(draws.length,6,'original arms use one shared-material draw, equipment uses five');
 for(const yaw of [0,-Math.PI/2,Math.PI,Math.PI/2,12*Math.PI+.63])for(const pitch of [-1.1,-.4,0])for(const roll of [0,.05,-.08]){
  camera.rotation.set(pitch+.025,yaw,roll);rig.update({yaw,pitch},true);camera.updateMatrixWorld(true);
- local.copy(north).applyQuaternion(rig.compass.getWorldQuaternion(new THREE.Quaternion()).invert());local.z=0;local.normalize();
- const tip=new THREE.Vector3(0,.062,0).applyAxisAngle(new THREE.Vector3(0,0,1),rig.needle.rotation.z).normalize();assert.ok(tip.dot(local)>.99999,'red tip follows projected world north under look, sway and lean');
- rig.needle.getWorldPosition(origin);needle.set(0,.062,0);rig.needle.localToWorld(needle);needle.sub(origin).normalize();assert.ok(needle.dot(north)>.98,'needle stays north in the world');
- assert.equal(rig.dial.rotation.z,rig.needle.rotation.z,'north on the card remains under the red tip');
+ const error=Math.atan2(Math.sin(rig.dial.rotation.z+yaw),Math.cos(rig.dial.rotation.z+yaw));assert.ok(Math.abs(error)<1e-6,'dial uses camera horizontal heading, independent of dial tilt and camera roll');
+ assert.equal(rig.dial.rotation.z,rig.needle.rotation.z,'N stays under the red tip');assert.equal(rig.headingIndex.rotation.z,0,'forward marker never rotates');
 }
 for(const [yaw,heading] of [[0,0],[-Math.PI/2,Math.PI/2],[Math.PI,Math.PI],[Math.PI/2,-Math.PI/2]]){camera.rotation.set(-1,yaw,0);rig.update({yaw,pitch:-1},true);const error=Math.atan2(Math.sin(rig.dial.rotation.z-heading),Math.cos(rig.dial.rotation.z-heading));assert.ok(Math.abs(error)<.00001,'fixed forward index reads N/E/S/W correctly');}
+camera.rotation.set(0,-Math.PI/2,0);rig.update({yaw:0,pitch:0},true);assert.equal(rig.heading.degrees,90,'camera heading takes priority over player yaw');
 rig.update({yaw:0,pitch:0},false);assert.equal(rig.root.visible,false);
-console.log('Passed fixed world-north needle, cardinal heading index, look/sway/lean compensation, wraparound and six-draw budget.');
+console.log('Passed shared camera heading, fixed forward marker, cardinal dial/needle positions, pitch/roll independence and six-draw budget.');
 
 const player={yaw:0,pitch:0,vx:0,vz:0,grounded:true,slide:0,state:'GROUNDED',config:{walk:6,sprint:9.5}},feel={dip:0};
 assert.equal(rig.arms.mesh.geometry.attributes.position.count,1608,'reuse the original FBX arms geometry');

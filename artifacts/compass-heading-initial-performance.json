@@ -1,0 +1,34 @@
+{
+  "samples": 570,
+  "fps": 38.3,
+  "frameMs": 26.14,
+  "p95Ms": 34.3,
+  "cpuMs": 14.54,
+  "drawCalls": 27,
+  "triangles": 47579,
+  "physicsMs": 0.42,
+  "updateMs": 1.43,
+  "cullMs": 5.16,
+  "renderMs": 7.37,
+  "mode": "navigation",
+  "audio": {
+    "state": "suspended",
+    "recordings": {
+      "forest": 117.3349433106576,
+      "storm": 51.75,
+      "footsteps": 0.36682539682539683,
+      "wolf": 8.777142857142858
+    }
+  },
+  "weather": "clear",
+  "night": false,
+  "enemies": 0,
+  "adapter": "ANGLE (AMD, ANGLE Metal Renderer: AMD Radeon Pro 555X, Unspecified Version)",
+  "renderScale": 0.8616848278232259,
+  "gpuMs": 5.35872,
+  "viewport": {
+    "width": 1680,
+    "height": 962
+  },
+  "emptyRenderFps": 46
+}
