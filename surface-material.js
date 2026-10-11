@@ -4,8 +4,8 @@ import {detailAtlas} from './detail-atlas.js?v=performance-15';
 // Instancing-aware procedural detail, preserving flat faces, shadows and fog.
 export function createSurfaceMaterial(kind,color,extra={}){
   const material=new THREE.MeshLambertMaterial({color,flatShading:true,...extra});
-  material.userData.surface=kind;
-  material.customProgramCacheKey=()=>`forest-surface-v4-${kind}`;
+  material.userData.surface=kind==='grass'?'foliage':kind;
+  material.customProgramCacheKey=()=>`forest-surface-v5-${kind}`;
   material.onBeforeCompile=shader=>{
     shader.uniforms.detailNoise={value:detailAtlas(kind==='wood'?'foliage':kind)};
     shader.uniforms.surfaceMoss={value:new THREE.Color(0x647a39)};
@@ -27,7 +27,7 @@ export function createSurfaceMaterial(kind,color,extra={}){
       uniform sampler2D detailNoise;
       float surfaceDetailFade(vec2 p){return 1.0-smoothstep(.3,1.2,length(fwidth(p)));}
     `);
-    const common=`
+    const common=kind==='grass'?'':`
       vec3 surfaceP=vSurfaceWorld;
       vec2 surfaceUV=vec2(surfaceP.x+surfaceP.z*.37,surfaceP.y+surfaceP.z*.71);
       vec2 atlasUV=surfaceUV;
@@ -46,6 +46,10 @@ export function createSurfaceMaterial(kind,color,extra={}){
         diffuseColor.rgb*=barkShade;
         float barkMoss=(1.0-smoothstep(.2,1.8,surfaceP.y))*smoothstep(.45,.72,surfacePatch);
         diffuseColor.rgb=mix(diffuseColor.rgb,surfaceMoss*.55,barkMoss*.4);
+      `,
+      grass:`
+        float bladeHeight=clamp(vSurfaceLocal.y/.37,0.0,1.0);
+        diffuseColor.rgb*=mix(vec3(.88,.9,.8),vec3(1.06,1.08,.96),sqrt(bladeHeight));
       `,
       foliage:`
         float leafClusters=surfaceDetail.g;
