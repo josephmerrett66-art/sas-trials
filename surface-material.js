@@ -4,8 +4,8 @@ import {detailAtlas} from './detail-atlas.js?v=performance-15';
 // Instancing-aware procedural detail, preserving flat faces, shadows and fog.
 export function createSurfaceMaterial(kind,color,extra={}){
   const material=new THREE.MeshLambertMaterial({color,flatShading:true,...extra});
-  material.userData.surface=kind==='grass'?'foliage':kind;
-  material.customProgramCacheKey=()=>`forest-surface-v5-${kind}`;
+  material.userData.surface=kind.startsWith('grass')?'foliage':kind;
+  material.customProgramCacheKey=()=>`forest-surface-v6-${kind}`;
   material.onBeforeCompile=shader=>{
     shader.uniforms.detailNoise={value:detailAtlas(kind==='wood'?'foliage':kind)};
     shader.uniforms.surfaceMoss={value:new THREE.Color(0x647a39)};
@@ -27,7 +27,7 @@ export function createSurfaceMaterial(kind,color,extra={}){
       uniform sampler2D detailNoise;
       float surfaceDetailFade(vec2 p){return 1.0-smoothstep(.3,1.2,length(fwidth(p)));}
     `);
-    const common=kind==='grass'?'':`
+    const common=kind.startsWith('grass')?'':`
       vec3 surfaceP=vSurfaceWorld;
       vec2 surfaceUV=vec2(surfaceP.x+surfaceP.z*.37,surfaceP.y+surfaceP.z*.71);
       vec2 atlasUV=surfaceUV;
@@ -75,7 +75,8 @@ export function createSurfaceMaterial(kind,color,extra={}){
         diffuseColor.rgb*=mix(1.0,.76+rings*.28,ringsFade);
       `
     };
-    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>\n${common}\n${effects[kind]??effects.foliage}`);
+    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>\n${common}\n${effects[kind.startsWith('grass')?'grass':kind]??effects.foliage}
+${kind.startsWith('grass')?`float grassDistance=length(vSurfaceWorld.xz-cameraPosition.xz); float grassTransition=smoothstep(22.0,32.0,grassDistance); float grassCoverage=${kind==='grass'?'1.0-grassTransition':'grassTransition*(1.0-smoothstep(85.0,92.0,grassDistance))'}; float grassThreshold=fract(dot(floor(gl_FragCoord.xy),vec2(.75487766,.56984029))); if(grassCoverage<=grassThreshold)discard;`:''}`);
   };
   return material;
 }

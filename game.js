@@ -1,5 +1,5 @@
 import {createTouchControls} from './touch-controls.js?v=1';
-import {loadNatureTrees} from './nature-trees.js?v=6';
+import {loadNatureTrees} from './nature-trees.js?v=8';
 import {ForestLife} from './forest-life.js?v=1';
 import {bakeForestShadows} from './cached-forest-shadows.js?v=1';
 import {RecordedAudio} from './recorded-audio.js?v=1';
@@ -9,17 +9,17 @@ import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
 import {Controller,defaults} from './controller.js?v=baseplate-1';
 import {GamepadInput} from './gamepad.js';
-import {createForest,collideForest} from './forest.js?v=grass-3';
+import {createForest,collideForest} from './forest.js?v=stones-2';
 import {MovementFeel,LookSway} from './feel.js?v=recorded-audio-1';
 import {PlayerLean,leanInput} from './lean.js';
 import {loadDetailAtlases} from './detail-atlas.js';
-import {ForestVisibility} from './forest-visibility.js?v=grass-3';
+import {ForestVisibility} from './forest-visibility.js?v=stones-2';
 import {RenderBudget} from './render-budget.js';
 import {FrameMonitor} from './frame-monitor.js';
 import {GpuTimer} from './gpu-timer.js';
 import {ForestTorch,installTorchOptics} from './torch.js';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=irregular-route-1';
-import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=irregular-route-1';
+import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=clean-1';
 import {HeldNavigation} from './held-navigation.js?v=baseplate-1';
 
 const params=new URLSearchParams(location.search),benchmark=params.has('benchmark'),benchmarkLandmark=benchmark&&/^[B-H]$/.test(params.get('landmark')??'');

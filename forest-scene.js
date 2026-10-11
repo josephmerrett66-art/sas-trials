@@ -1,5 +1,6 @@
-import {meadowGrassGeometry} from './meadow-grass.js?v=1';
-import {woodlandField,addNatureTrees} from './nature-trees.js?v=6';
+import {addNatureDetails} from './nature-details.js?v=2';
+import {meadowGrassGeometry,distantGrassGeometry} from './meadow-grass.js?v=1';
+import {woodlandField,addNatureTrees} from './nature-trees.js?v=8';
 import {refineConifer,broadleafGeometry,flowerPatchGeometry,flowerSites} from './woodland-polish.js?v=1';
 import {controlLandmarkClearing} from './control-landmarks.js?v=irregular-route-1';
 import {createUniqueLandmarks} from './unique-landmarks.js?v=irregular-route-1';
@@ -10,7 +11,7 @@ import {trailClearance,trailCenter,trails} from './landmark-routes.js?v=no-river
 import {tileTerrain} from './terrain-tiles.js';
 import * as THREE from './vendor/three.module.js';
 import {createGroundMaterial} from './ground-material.js?v=gravel-1';
-import {createSurfaceMaterial} from './surface-material.js?v=grass-3';
+import {createSurfaceMaterial} from './surface-material.js?v=details-1';
 
 import {terrainHeight,terrainNormal,WORLD_SIZE,TERRAIN_SEGMENTS} from './terrain.js?v=gullies-1';
 export {trailCenter};
@@ -21,12 +22,13 @@ export function createForest(scene,natureModels=null){
   const material=(color,extra={})=>new THREE.MeshStandardMaterial({color,flatShading:true,roughness:1,...extra});
   const outsideTrail=(x,z,margin=3.5)=>trailClearance(x,z)>margin-2.15&&Math.hypot(x,z-8)>5;
   const batch=(name,geometry,mat,items,place,decorative=false)=>{
+    if(natureModels?.details&&/Trail pebbles|Low angular shrubs|Star-shaped forest ferns|woodland wildflower/.test(name)){geometry.dispose();mat.dispose();return null;}
     if(natureModels&&/exposed branches|trunk roots|bark knots/.test(name)){geometry.dispose();mat.dispose();return null;}
     const kind=name.includes('wood faces')?'wood':/trunks|branches|stumps|logs|roots|knots/.test(name)?'bark':/boulders|pebbles/.test(name)?'rock':/crowns|shrubs|ferns|grass/.test(name)?'foliage':null;
-    if(kind){const old=mat;mat=createSurfaceMaterial(/grass/.test(name)?'grass':kind,old.color,{side:old.side,fog:old.fog,vertexColors:old.vertexColors});old.dispose();}
+    if(kind){const old=mat;mat=createSurfaceMaterial(/Distant grass/.test(name)?'grassFar':/grass/.test(name)?'grass':kind,old.color,{side:old.side,fog:old.fog,vertexColors:old.vertexColors});old.dispose();}
     const mesh=new THREE.InstancedMesh(geometry,mat,items.length);mesh.name=name;mesh.userData.decorative=decorative;
     items.forEach((item,i)=>{transform.position.set(0,0,0);transform.rotation.set(0,0,0);transform.scale.set(1,1,1);place(item,transform,i);if(!/mountain|cloud/.test(name))transform.position.y+=item.ground??terrainHeight(item.x,item.z);transform.updateMatrix();mesh.setMatrixAt(i,transform.matrix);if(item.shade!==undefined){shade.setScalar(item.shade);mesh.setColorAt(i,shade);}});
-    if(natureModels&&/trunks|crowns|branches|roots|knots/.test(name)){mesh.userData.treeProxy=true;mesh.userData.shadowOnly=true;}
+    if(natureModels&&(/trunks|crowns|branches|roots|knots/.test(name)||(natureModels.details&&name==='Large faceted boulders'))){mesh.userData.treeProxy=true;mesh.userData.shadowOnly=true;}
     mesh.computeBoundingSphere();mesh.castShadow=/trunks|crowns|branches|knots|boulders|stumps|logs|roots/.test(name);mesh.receiveShadow=mesh.castShadow||/shrubs|ferns|grass|wildflower|wood faces/.test(name);scene.add(mesh);return mesh;
   };
   const groundGeometry=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,TERRAIN_SEGMENTS,TERRAIN_SEGMENTS);groundGeometry.rotateX(-Math.PI/2);
@@ -46,7 +48,7 @@ export function createForest(scene,natureModels=null){
    // Unsigned distance prevents false dirt wedges between nearby branches.
    for(let u=0;u<3;u++)for(let v=0;v<3-u;v++){const a=vertex(u/3,v/3),b=vertex((u+1)/3,v/3),c=vertex(u/3,(v+1)/3);add(a,b,c);if(u+v<2)add(b,vertex((u+1)/3,(v+1)/3),c);}
   }
-  const pathGeometry=new THREE.BufferGeometry();pathGeometry.setAttribute('position',new THREE.Float32BufferAttribute(trailPositions,3));pathGeometry.setAttribute('normal',new THREE.Float32BufferAttribute(trailNormals,3));pathGeometry.setAttribute('trailEdge',new THREE.Float32BufferAttribute(trailEdges,1));scene.add(tileTerrain(pathGeometry,createGroundMaterial(true),'Winding dirt trail'));groundGeometry.dispose();pathGeometry.dispose();
+  const pathGeometry=new THREE.BufferGeometry();pathGeometry.setAttribute('position',new THREE.Float32BufferAttribute(trailPositions,3));pathGeometry.setAttribute('normal',new THREE.Float32BufferAttribute(trailNormals,3));pathGeometry.setAttribute('trailEdge',new THREE.Float32BufferAttribute(trailEdges,1));if(!natureModels?.details)scene.add(tileTerrain(pathGeometry,createGroundMaterial(true),'Winding dirt trail'));groundGeometry.dispose();pathGeometry.dispose();
   const trees=[];
   for(let i=0;i<Math.round(4700*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z))continue;trees.push({x,z,height:9+random()*14,width:1.65+random()*2.25,rotation:random()*Math.PI*2,trunk:.7+random()*.65});}
   for(const [x,z] of [[-6,-2],[7,-4],[-6,-17],[6,1],[-7,13]])trees.push({x,z,height:22,width:3.5,rotation:random()*6,trunk:1.3});
@@ -111,6 +113,7 @@ export function createForest(scene,natureModels=null){
   rocks.push(FIRST_CONTROL.north,FIRST_CONTROL.south);
   batch('Large faceted boulders',new THREE.IcosahedronGeometry(1,0),material(0x777d78),rocks,(r,o)=>{o.position.set(r.x,r.size*.34,r.z);o.rotation.set(.15,r.rotation,.1);o.scale.set(r.size,r.size*.65,r.size*.8);});
   rocks.forEach(r=>obstacles.push({x:r.x,z:r.z,baseY:terrainHeight(r.x,r.z),radius:r.size*.85,height:r.size}));
+  if(natureModels?.details)addNatureDetails(scene,natureModels.details,rocks,trees);
   const pebbles=[];for(let i=0;i<Math.round(2400*lengthScale);i++){const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),x=route.center(z)+(random()-.5)*8;pebbles.push({x,z,size:.03+random()*.19,rotation:random()*6,shade:.7+random()*.3});}
   batch('Trail pebbles',new THREE.IcosahedronGeometry(1,0),material(0x92938b),pebbles,(r,o)=>{o.position.set(r.x,.025,r.z);o.rotation.y=r.rotation;o.scale.set(r.size,r.size*.6,r.size);},true);
   const grassGeometry=meadowGrassGeometry(),grassNormal=new THREE.Vector3(),grassUp=new THREE.Vector3(0,1,0);
@@ -135,7 +138,8 @@ export function createForest(scene,natureModels=null){
     grass.push({x,z,size:.72+patch*.6+random()*.35,rotation:random()*6,shade:.72+patch*.22,width:1.3+patch*.4});
   }
   seed=grassSeed;
-  const grassMesh=batch('Dense grass clumps',grassGeometry,material(0xffffff,{side:THREE.DoubleSide,vertexColors:true}),grass,(g,o)=>{o.position.set(g.x,0,g.z);o.quaternion.setFromUnitVectors(grassUp,terrainNormal(g.x,g.z,grassNormal));o.rotateY(g.rotation);o.scale.set(g.size*g.width,g.size*.85,g.size*g.width);},true);grassMesh.userData.visibilityRange=26;
+  const grassMesh=batch('Dense grass clumps',grassGeometry,material(0xffffff,{side:THREE.DoubleSide,vertexColors:true}),grass,(g,o)=>{o.position.set(g.x,0,g.z);o.quaternion.setFromUnitVectors(grassUp,terrainNormal(g.x,g.z,grassNormal));o.rotateY(g.rotation);o.scale.set(g.size*g.width,g.size*.85,g.size*g.width);},true);grassMesh.userData.visibilityRange=33;
+  const farGrass=batch('Distant grass carpet',distantGrassGeometry(grassGeometry),material(0xffffff,{side:THREE.DoubleSide,vertexColors:true}),grass.filter((g,i)=>i%2===0),(g,o)=>{o.position.set(g.x,0,g.z);o.quaternion.setFromUnitVectors(grassUp,terrainNormal(g.x,g.z,grassNormal));o.rotateY(g.rotation);o.scale.set(g.size*g.width,g.size*.85,g.size*g.width);},true);farGrass.userData.visibilityRange=94;farGrass.userData.minVisibilityRange=20;
   const bushes=[];for(let i=0;i<Math.round(5000*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z,4))continue;bushes.push({x,z,size:.4+random()*.85,rotation:random()*6,shade:.7+random()*.3});}
   for(let i=0;i<60;i++){const z=-60+random()*80,x=trailCenter(z)+(random()<.5?-1:1)*(4+random()*7);if(Math.hypot(x,z-8)>6)bushes.push({x,z,size:.6+random()*.9,rotation:random()*6,shade:.7+random()*.3});}
   batch('Low angular shrubs',new THREE.IcosahedronGeometry(1,0),material(0x627b36),bushes,(b,o)=>{o.position.set(b.x,b.size*.35,b.z);o.rotation.y=b.rotation;o.scale.set(b.size,b.size*.65,b.size);},true);

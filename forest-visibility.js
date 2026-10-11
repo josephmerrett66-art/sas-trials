@@ -43,7 +43,7 @@ export class ForestVisibility {
     if(camera.position.x<cell.bounds.min.x-visibleRange||camera.position.x>cell.bounds.max.x+visibleRange||camera.position.z<cell.bounds.min.z-visibleRange||camera.position.z>cell.bounds.max.z+visibleRange||!this.frustum.intersectsBox(cell.bounds))continue;
     for(const record of cell.records){
     const dx=record.x-camera.position.x,dz=record.z-camera.position.z;
-    if(dx*dx+dz*dz>Math.min(limit,(this.maxDistance+record.sphere.radius)**2)||!this.frustum.intersectsSphere(record.sphere))continue;
+    if(dx*dx+dz*dz<(mesh.userData.minVisibilityRange??0)**2||dx*dx+dz*dz>Math.min(limit,(this.maxDistance+record.sphere.radius)**2)||!this.frustum.intersectsSphere(record.sphere))continue;
     if(selection[count]!==record.id){changed=true;selection[count]=record.id;mesh.instanceMatrix.array.set(record.matrix,count*16);if(record.color)mesh.instanceColor.array.set(record.color,count*3);}
     count++;
     }

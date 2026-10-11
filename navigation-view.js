@@ -21,9 +21,9 @@ export class NavigationView {
   this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.chart=document.querySelector('#nav-chart');this.chart.width=800;this.chart.height=800;this.updateAssignment();
  }
- get blocking(){return !!this.panel||this.exercise.complete;}
+ get blocking(){return false;}
  close(){this.panel=null;this.map.hidden=true;this.journal.hidden=true;}
- toggle(panel){if(panel==='map'||panel==='compass'){this.close();return;}const next=this.panel===panel?null:panel;this.close();this.panel=next;if(next==='map')this.map.hidden=false;if(next==='assignment')this.journal.hidden=false;}
+ toggle(panel){this.close();}
  reset(){this.close();this.summary.hidden=true;this.renderedStage=-1;this.updateAssignment();}
  updateAssignment(){
   const current=this.exercise.current;this.renderedStage=this.exercise.stage;this.drawMap();
@@ -33,7 +33,7 @@ export class NavigationView {
   if(this.renderedStage!==this.exercise.stage){this.updateAssignment();if(!this.exercise.complete){this.close();this.toggle('assignment');}}
   const near=this.exercise.nearby(player);this.prompt.textContent=near&&!this.exercise.complete?(this.exercise.checkpoints.indexOf(near)<this.exercise.stage?`Post ${near.code} · Reached`:`Post ${near.code} · G / Xbox X to register`):'';
   this.notice.textContent=this.exercise.messageTime>0?this.exercise.message:'';
-  if(this.exercise.complete){this.close();this.summary.hidden=false;document.querySelector('#summary-copy').textContent=`${this.exercise.checkpoints.length} / ${this.exercise.checkpoints.length} checkpoints reached · ${Math.round(this.exercise.distance)} m travelled · ${Math.round(this.exercise.elevation)} m elevation gained`;}
+  if(this.exercise.complete){this.close();this.summary.hidden=true;document.querySelector('#summary-copy').textContent=`${this.exercise.checkpoints.length} / ${this.exercise.checkpoints.length} checkpoints reached · ${Math.round(this.exercise.distance)} m travelled · ${Math.round(this.exercise.elevation)} m elevation gained`;}
  }
  drawMap(){
   const ctx=this.chart.getContext('2d'),margin=48,span=704,half=WORLD_SIZE/2,step=4,px=x=>margin+(x+half)/WORLD_SIZE*span,pz=z=>margin+(z+half)/WORLD_SIZE*span;
@@ -51,6 +51,6 @@ export class NavigationView {
   mark(START,'START','#303b31');for(const p of this.exercise.revealed)mark(p,p.code,p===this.exercise.current?'#8e3e2d':'#52614d');
   ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m`,48,781);
   this.chart.dispatchEvent(new Event('chart-updated'));
-  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: dirt track · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
+  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
  }
 }

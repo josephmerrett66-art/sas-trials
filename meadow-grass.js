@@ -14,3 +14,10 @@ export function meadowGrassGeometry(){
   }
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();return geometry;
 }
+
+// Distant blades retain the meadow silhouette with a small fraction of the triangles.
+export function distantGrassGeometry(source){
+ const p=source.attributes.position,c=source.attributes.color,positions=[],colors=[];
+ for(let blade=0;blade<72;blade+=3)for(const offset of [0,1,8]){const i=blade*9+offset;positions.push(p.getX(i),p.getY(i),p.getZ(i));colors.push(c.getX(i),c.getY(i),c.getZ(i));}
+ const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();return geometry;
+}

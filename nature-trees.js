@@ -1,3 +1,4 @@
+import {loadNatureDetails} from './nature-details.js?v=2';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 
@@ -47,7 +48,7 @@ export async function loadNatureTrees(){
    parts.push({geometry,material,leaf});
   });models.push({name,parts});
  }
- return models;
+ models.details=await loadNatureDetails();return models;
 }
 export function addNatureTrees(scene,trees,models){
  const transform=new THREE.Object3D(),shade=new THREE.Color();
