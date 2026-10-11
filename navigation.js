@@ -1,11 +1,10 @@
-import {riverClearance} from './landmark-routes.js?v=gullies-1';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
 export const START={x:0,z:12};
 export const bearing=yaw=>((Math.round(-yaw*180/Math.PI)%360)+360)%360;
 export function gridReference(x,z,size=WORLD_SIZE){const cell=size/8;return String.fromCharCode(65+Math.max(0,Math.min(7,Math.floor((x+size/2)/cell))))+(Math.max(0,Math.min(7,Math.floor((z+size/2)/cell)))+1);}
 export function makeCheckpoints(obstacles=[]){
  const half=WORLD_SIZE/2;
- const clear=(x,z)=>riverClearance(x,z)>6&&obstacles.every(o=>Math.hypot(x-o.x,z-o.z)>o.radius+1.3);
+ const clear=(x,z)=>obstacles.every(o=>Math.hypot(x-o.x,z-o.z)>o.radius+1.3);
  const find=(x,z)=>{for(let radius=0;radius<=32;radius+=2)for(let i=0;i<24;i++){const angle=i*Math.PI/12,px=x+Math.cos(angle)*radius,pz=z+Math.sin(angle)*radius;if(Math.abs(px)<half-45&&Math.abs(pz)<half-45&&clear(px,pz))return {x:px,z:pz};}throw Error('No accessible checkpoint site');};
  // Clockwise circuit through the outer valleys and ridges; coordinates stay private until each leg is unlocked.
  const sites=[[-.36,-.40],[.40,-.42],[.42,-.03],[.40,.40],[-.05,.42],[-.42,.40],[-.42,-.05],[-.08,-.42]];

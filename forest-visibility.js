@@ -5,7 +5,7 @@ export class ForestVisibility {
   this.previousPosition=new THREE.Vector3(Infinity,Infinity,Infinity);this.previousRotation=new THREE.Euler();this.previousFov=0;this.previousAspect=0;this.frustum=new THREE.Frustum();this.view=new THREE.Matrix4();this.matrix=new THREE.Matrix4();this.projection=new THREE.Matrix4();
   this.batches=scene.children.filter(mesh=>mesh.isInstancedMesh&&mesh.name).map(mesh=>{
    mesh.geometry.computeBoundingSphere();
-   const range=/grass/.test(mesh.name)?42:/pebbles|knots/.test(mesh.name)?38:/shrubs|ferns|roots|branches/.test(mesh.name)?65:/clouds|mountain/.test(mesh.name)?900:145;
+   const range=/grass/.test(mesh.name)?38:/pebbles|knots/.test(mesh.name)?38:/shrubs|ferns|roots|branches/.test(mesh.name)?65:/clouds|mountain/.test(mesh.name)?900:145;
    const records=[];
    for(let i=0;i<mesh.count;i++){
     mesh.getMatrixAt(i,this.matrix);const sphere=mesh.geometry.boundingSphere.clone().applyMatrix4(this.matrix);sphere.radius+=.35;

@@ -1,5 +1,5 @@
 // Static, metre-sampled route fields: constant-cost queries for terrain and planting.
-// Smooth unequal bends give each drainage/trail its own recognisable geography.
+// Smooth unequal bends give each trail its own recognisable geography.
 function route(name,points,width,level=null){
  const start=points[0][0],end=points.at(-1)[0],xs=new Float32Array((end-start)*2+1);
  let k=0;
@@ -14,7 +14,6 @@ function route(name,points,width,level=null){
  return {name,start,end,center,slope,width,level,distance:(x,z)=>z<start||z>end?Infinity:Math.abs(x-center(z))/Math.sqrt(1+slope(z)**2)};
 }
 const trailGuide=route('Trail guide', [[-720,-90],[-580,-145],[-400,-50],[-250,170],[-100,145],[0,85],[135,175],[280,125],[440,-60],[560,-95],[720,40]],z=>6.5+1.2*Math.sin(z/73)+.6*Math.sin(z/29));
-export {rivers,riverClearance} from './drainage.js?v=gullies-1';
 // Preserve the existing trails; this guide no longer controls terrain or water.
 const bankPoints=[];for(let z=-720;z<=720;z+=30)bankPoints.push([z,trailGuide.center(z)-25-60*Math.exp(-z*z/9000)+7*Math.sin(z/108)]);
 export const mainTrail=route('Valley trail',bankPoints,z=>2.15+.3*Math.sin(z/97));

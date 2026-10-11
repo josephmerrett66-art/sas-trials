@@ -1,7 +1,7 @@
-import {riverClearance,trailClearance,trailCenter,trails} from './landmark-routes.js?v=gullies-1';
+import {trailClearance,trailCenter,trails} from './landmark-routes.js?v=no-river-1';
 import {tileTerrain} from './terrain-tiles.js';
 import * as THREE from './vendor/three.module.js';
-import {createGroundMaterial} from './ground-material.js?v=gullies-1';
+import {createGroundMaterial} from './ground-material.js?v=no-river-1';
 import {createSurfaceMaterial} from './surface-material.js?v=performance-15';
 
 import {terrainHeight,WORLD_SIZE,TERRAIN_SEGMENTS} from './terrain.js?v=gullies-1';
@@ -11,8 +11,7 @@ export function createForest(scene){
   const span=WORLD_SIZE-20,areaScale=(span/620)**2,lengthScale=span/620;
   const obstacles=[],transform=new THREE.Object3D(),shade=new THREE.Color();
   const material=(color,extra={})=>new THREE.MeshStandardMaterial({color,flatShading:true,roughness:1,...extra});
-  const onRiver=(x,z,extra=0)=>riverClearance(x,z)<extra;
-  const outsideTrail=(x,z,margin=3.5)=>!onRiver(x,z,5)&&trailClearance(x,z)>margin-2.15&&Math.hypot(x,z-8)>5;
+  const outsideTrail=(x,z,margin=3.5)=>trailClearance(x,z)>margin-2.15&&Math.hypot(x,z-8)>5;
   const batch=(name,geometry,mat,items,place,decorative=false)=>{
     const kind=name.includes('wood faces')?'wood':/trunks|branches|stumps|logs|roots|knots/.test(name)?'bark':/boulders|pebbles/.test(name)?'rock':/crowns|shrubs|ferns|grass/.test(name)?'foliage':null;
     if(kind){const old=mat;mat=createSurfaceMaterial(kind,old.color,{side:old.side,fog:old.fog});old.dispose();}
@@ -21,9 +20,8 @@ export function createForest(scene){
     mesh.computeBoundingSphere();mesh.castShadow=/trunks|crowns|branches|knots|boulders|stumps|logs|roots/.test(name);mesh.receiveShadow=mesh.castShadow||/shrubs|ferns|grass|wood faces/.test(name);scene.add(mesh);return mesh;
   };
   const groundGeometry=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,TERRAIN_SEGMENTS,TERRAIN_SEGMENTS);groundGeometry.rotateX(-Math.PI/2);
-  const positions=groundGeometry.attributes.position,riverBanks=new Float32Array(positions.count);
-  for(let i=0;i<positions.count;i++){const x=positions.getX(i),z=positions.getZ(i);positions.setY(i,terrainHeight(x,z));riverBanks[i]=Math.max(0,1-Math.max(0,riverClearance(x,z)-2)/12);}
-  groundGeometry.setAttribute('riverBank',new THREE.BufferAttribute(riverBanks,1));
+  const positions=groundGeometry.attributes.position;
+  for(let i=0;i<positions.count;i++){const x=positions.getX(i),z=positions.getZ(i);positions.setY(i,terrainHeight(x,z));}
   groundGeometry.computeVertexNormals();
   scene.add(tileTerrain(groundGeometry,createGroundMaterial(),'Faceted forest floor'));
   // Copy terrain triangles exactly so the dirt never clips into rolling hills.
@@ -33,7 +31,7 @@ export function createForest(scene){
    const ids=[indices[i],indices[i+1],indices[i+2]];if(!ids.some(id=>trailField[id]<6))continue;
    const color=new THREE.Color(0x9e784b).lerp(new THREE.Color(0xc49b60),random());
    const vertex=(u,v)=>{const w=1-u-v,x=w*positions.getX(ids[0])+u*positions.getX(ids[1])+v*positions.getX(ids[2]),z=w*positions.getZ(ids[0])+u*positions.getZ(ids[1])+v*positions.getZ(ids[2]);return [x,w*positions.getY(ids[0])+u*positions.getY(ids[1])+v*positions.getY(ids[2])+.02,z,trailClearance(x,z)];};
-   const add=(a,b,c)=>{if(Math.min(a[3],b[3],c[3])>.4||[a,b,c].some(p=>onRiver(p[0],p[2],1)))return;for(const p of [a,b,c]){trailPositions.push(p[0],p[1],p[2]);trailColors.push(color.r,color.g,color.b);trailEdges.push(p[3]);}};
+   const add=(a,b,c)=>{if(Math.min(a[3],b[3],c[3])>.4)return;for(const p of [a,b,c]){trailPositions.push(p[0],p[1],p[2]);trailColors.push(color.r,color.g,color.b);trailEdges.push(p[3]);}};
    // Local subdivision only along tracks, retaining the exact parent terrain plane.
    // Unsigned distance prevents false dirt wedges between nearby branches.
    for(let u=0;u<3;u++)for(let v=0;v<3-u;v++){const a=vertex(u/3,v/3),b=vertex((u+1)/3,v/3),c=vertex(u/3,(v+1)/3);add(a,b,c);if(u+v<2)add(b,vertex((u+1)/3,(v+1)/3),c);}
@@ -99,13 +97,13 @@ export function createForest(scene){
   for(const [x,z,size] of [[-4,-3,2.1],[5,-11,2.4],[-7,-23,3],[8,9,2.5]])rocks.push({x,z,size,rotation:random()*6,shade:1});
   batch('Large faceted boulders',new THREE.IcosahedronGeometry(1,0),material(0x777d78),rocks,(r,o)=>{o.position.set(r.x,r.size*.34,r.z);o.rotation.set(.15,r.rotation,.1);o.scale.set(r.size,r.size*.65,r.size*.8);});
   rocks.forEach(r=>obstacles.push({x:r.x,z:r.z,baseY:terrainHeight(r.x,r.z),radius:r.size*.85,height:r.size}));
-  const pebbles=[];for(let i=0;i<Math.round(2400*lengthScale);i++){const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),x=route.center(z)+(random()-.5)*8;if(onRiver(x,z,2))continue;pebbles.push({x,z,size:.03+random()*.19,rotation:random()*6,shade:.7+random()*.3});}
+  const pebbles=[];for(let i=0;i<Math.round(2400*lengthScale);i++){const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),x=route.center(z)+(random()-.5)*8;pebbles.push({x,z,size:.03+random()*.19,rotation:random()*6,shade:.7+random()*.3});}
   batch('Trail pebbles',new THREE.IcosahedronGeometry(1,0),material(0x92938b),pebbles,(r,o)=>{o.position.set(r.x,.025,r.z);o.rotation.y=r.rotation;o.scale.set(r.size,r.size*.6,r.size);},true);
   // Single low-poly clump geometry shared by every grass instance.
   const blades=[];for(let i=0;i<6;i++){const angle=i*2.399,width=.045+random()*.025,height=.25+random()*.35,x=Math.sin(angle)*.12,z=Math.cos(angle)*.12;const sideX=Math.cos(angle)*width,sideZ=-Math.sin(angle)*width;blades.push(x-sideX,0,z-sideZ,x+sideX,0,z+sideZ,x+Math.sin(angle)*.15,height,z+Math.cos(angle)*.15);}
   const grassGeometry=new THREE.BufferGeometry();grassGeometry.setAttribute('position',new THREE.Float32BufferAttribute(blades,3));grassGeometry.computeVertexNormals();
-  const grass=[];for(let i=0;i<Math.round(74000*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(onRiver(x,z,2)||trailClearance(x,z)<.25||Math.hypot(x,z-8)<2.8)continue;grass.push({x,z,size:.55+random()*1.2,rotation:random()*6,shade:.6+random()*.4});}
-  for(let i=0;i<Math.round(5000*lengthScale);i++){const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),side=random()<.5?-1:1,x=route.center(z)+side*(route.width(z)+.4+random()*4);if(onRiver(x,z,2)||Math.hypot(x,z-8)<3)continue;grass.push({x,z,size:.75+random()*1.25,rotation:random()*6,shade:.6+random()*.4});}
+  const grass=[];for(let i=0;i<Math.round(74000*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(trailClearance(x,z)<.25||Math.hypot(x,z-8)<2.8)continue;grass.push({x,z,size:.55+random()*1.2,rotation:random()*6,shade:.6+random()*.4});}
+  for(let i=0;i<Math.round(5000*lengthScale);i++){const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),side=random()<.5?-1:1,x=route.center(z)+side*(route.width(z)+.4+random()*4);if(Math.hypot(x,z-8)<3)continue;grass.push({x,z,size:.75+random()*1.25,rotation:random()*6,shade:.6+random()*.4});}
   batch('Dense grass clumps',grassGeometry,material(0x8ca347,{side:THREE.DoubleSide}),grass,(g,o)=>{o.position.set(g.x,.015,g.z);o.rotation.y=g.rotation;o.scale.setScalar(g.size);},true);
   const bushes=[];for(let i=0;i<Math.round(5000*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z,4))continue;bushes.push({x,z,size:.4+random()*.85,rotation:random()*6,shade:.7+random()*.3});}
   for(let i=0;i<60;i++){const z=-60+random()*80,x=trailCenter(z)+(random()<.5?-1:1)*(4+random()*7);if(Math.hypot(x,z-8)>6)bushes.push({x,z,size:.6+random()*.9,rotation:random()*6,shade:.7+random()*.3});}

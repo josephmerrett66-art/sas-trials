@@ -1,0 +1,25 @@
+{
+  "samples": 570,
+  "fps": 59.9,
+  "frameMs": 16.7,
+  "p95Ms": 17.5,
+  "cpuMs": 1.47,
+  "drawCalls": 33,
+  "triangles": 40428,
+  "physicsMs": 0.04,
+  "updateMs": 0.04,
+  "cullMs": 0.81,
+  "renderMs": 0.57,
+  "mode": "navigation",
+  "weather": "clear",
+  "night": false,
+  "enemies": 0,
+  "adapter": "ANGLE (AMD, ANGLE Metal Renderer: AMD Radeon Pro 555X, Unspecified Version)",
+  "renderScale": 0.8616848278232259,
+  "gpuMs": 4.996,
+  "viewport": {
+    "width": 1680,
+    "height": 962
+  },
+  "emptyRenderFps": 59.8
+}
