@@ -4,11 +4,11 @@ import * as THREE from './vendor/three.module.js';
 export function fitForestShadows(light,scene){
  scene.updateMatrixWorld(true);
  const bounds=new THREE.Box3();
- for(const mesh of scene.children){
-  if(!mesh.isMesh||(!mesh.castShadow&&!mesh.receiveShadow))continue;
+ scene.traverse(mesh=>{
+  if(!mesh.isMesh||(!mesh.castShadow&&!mesh.receiveShadow))return;
   if(mesh.isInstancedMesh){mesh.computeBoundingBox();bounds.union(mesh.boundingBox.clone().applyMatrix4(mesh.matrixWorld));}
   else bounds.union(new THREE.Box3().setFromObject(mesh));
- }
+ });
  if(bounds.isEmpty())return null;
  const direction=light.position.clone().sub(light.target.position).normalize(),center=bounds.getCenter(new THREE.Vector3()),distance=bounds.getSize(new THREE.Vector3()).length()+50;
  light.target.position.copy(center);light.position.copy(center).addScaledVector(direction,distance);
