@@ -1,0 +1,23 @@
+{
+  "samples": 570,
+  "fps": 59.6,
+  "frameMs": 16.78,
+  "p95Ms": 17.6,
+  "cpuMs": 2.13,
+  "drawCalls": 28,
+  "triangles": 44284,
+  "physicsMs": 0.03,
+  "updateMs": 0.19,
+  "cullMs": 0.94,
+  "renderMs": 0.95,
+  "renderScale": 0.8879160028572114,
+  "gpuMs": 9.95264,
+  "viewport": {
+    "width": 1680,
+    "height": 906
+  },
+  "audio": {
+    "state": "suspended"
+  },
+  "emptyRenderFps": 60
+}

@@ -1,3 +1,4 @@
+import {woodlandField,addNatureTrees} from './nature-trees.js?v=6';
 import {refineConifer,broadleafGeometry,flowerPatchGeometry,flowerSites} from './woodland-polish.js?v=1';
 import {controlLandmarkClearing} from './control-landmarks.js?v=irregular-route-1';
 import {createUniqueLandmarks} from './unique-landmarks.js?v=irregular-route-1';
@@ -12,17 +13,19 @@ import {createSurfaceMaterial} from './surface-material.js?v=performance-15';
 
 import {terrainHeight,WORLD_SIZE,TERRAIN_SEGMENTS} from './terrain.js?v=gullies-1';
 export {trailCenter};
-export function createForest(scene){
+export function createForest(scene,natureModels=null){
   let seed=417;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   const span=WORLD_SIZE-20,areaScale=(span/620)**2,lengthScale=span/620;
   const obstacles=[],transform=new THREE.Object3D(),shade=new THREE.Color();
   const material=(color,extra={})=>new THREE.MeshStandardMaterial({color,flatShading:true,roughness:1,...extra});
   const outsideTrail=(x,z,margin=3.5)=>trailClearance(x,z)>margin-2.15&&Math.hypot(x,z-8)>5;
   const batch=(name,geometry,mat,items,place,decorative=false)=>{
+    if(natureModels&&/exposed branches|trunk roots|bark knots/.test(name)){geometry.dispose();mat.dispose();return null;}
     const kind=name.includes('wood faces')?'wood':/trunks|branches|stumps|logs|roots|knots/.test(name)?'bark':/boulders|pebbles/.test(name)?'rock':/crowns|shrubs|ferns|grass/.test(name)?'foliage':null;
     if(kind){const old=mat;mat=createSurfaceMaterial(kind,old.color,{side:old.side,fog:old.fog});old.dispose();}
     const mesh=new THREE.InstancedMesh(geometry,mat,items.length);mesh.name=name;mesh.userData.decorative=decorative;
     items.forEach((item,i)=>{transform.position.set(0,0,0);transform.rotation.set(0,0,0);transform.scale.set(1,1,1);place(item,transform,i);if(!/mountain|cloud/.test(name))transform.position.y+=item.ground??terrainHeight(item.x,item.z);transform.updateMatrix();mesh.setMatrixAt(i,transform.matrix);if(item.shade!==undefined){shade.setScalar(item.shade);mesh.setColorAt(i,shade);}});
+    if(natureModels&&/trunks|crowns|branches|roots|knots/.test(name)){mesh.userData.treeProxy=true;mesh.userData.shadowOnly=true;}
     mesh.computeBoundingSphere();mesh.castShadow=/trunks|crowns|branches|knots|boulders|stumps|logs|roots/.test(name);mesh.receiveShadow=mesh.castShadow||/shrubs|ferns|grass|wildflower|wood faces/.test(name);scene.add(mesh);return mesh;
   };
   const groundGeometry=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,TERRAIN_SEGMENTS,TERRAIN_SEGMENTS);groundGeometry.rotateX(-Math.PI/2);
@@ -49,6 +52,7 @@ export function createForest(scene){
   const species=['pine','spruce','fir','broadleaf','snag','sapling'];
   trees.forEach((tree,i)=>{
     const roll=random();tree.species=i>=trees.length-5?[0,2,4,3,1][i-(trees.length-5)]:roll<.3?0:roll<.55?1:roll<.76?2:roll<.86?3:roll<.93?4:5;
+    if(natureModels){const field=woodlandField(tree.x,tree.z);tree.kitFamily=field.grove>.4?2:field.grove<-.5?1:0;tree.species=roll>.94?5:tree.kitFamily===2?3:tree.kitFamily===1?2:0;}
     if(tree.species===0)tree.width*=.75;
     if(tree.species===1){tree.width*=.9;tree.height*=1.1;}
     if(tree.species===2)tree.width*=1.2;
@@ -59,6 +63,7 @@ export function createForest(scene){
     tree.trunkHeight=tree.height*(tree.species===3?.63:tree.species===4?1:.72);
     tree.ground=terrainHeight(tree.x,tree.z);tree.shade=.65+random()*.35;
   });
+  if(natureModels){for(let i=trees.length-6;i>=0;i--){const t=trees[i],hash=Math.sin(t.x*12.9898+t.z*78.233)*43758.5453;if(hash-Math.floor(hash)>woodlandField(t.x,t.z).density)trees.splice(i,1);}}
   const trunkGeometry=new THREE.CylinderGeometry(.17,.43,1,7);trunkGeometry.translate(0,.5,0);
   batch('Tall faceted trunks',trunkGeometry,material(0x87603c),trees,(t,o)=>{o.position.set(t.x,0,t.z);o.rotation.set(t.leanZ,t.rotation,-t.leanX);o.scale.set(t.trunk,t.trunkHeight,t.trunk);});
   trees.forEach(t=>obstacles.push({x:t.x,z:t.z,baseY:t.ground,radius:.43*t.trunk,height:t.height}));
@@ -99,6 +104,7 @@ export function createForest(scene){
   const rootGeometry=new THREE.ConeGeometry(1,1,4);rootGeometry.translate(0,.5,0);
   batch('Flared trunk roots',rootGeometry,material(0x755335),roots,(r,o)=>{o.position.set(r.x,0,r.z);o.rotation.set(.35,r.rotation,.55);o.scale.set(r.size*.22,r.size*.8,r.size*.32);});
   batch('Trunk bark knots',new THREE.IcosahedronGeometry(1,0),material(0x60432c),knots,(k,o)=>{o.position.set(k.x,k.y,k.z);o.scale.set(k.size,k.size*1.5,k.size);});
+  if(natureModels)addNatureTrees(scene,trees,natureModels);
   const rocks=[];for(let i=0;i<Math.round(1600*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z,4.4))continue;rocks.push({x,z,size:.6+random()*2.8,rotation:random()*6,shade:.8+random()*.2});}
   for(const [x,z,size] of [[-4,-3,2.1],[5,-11,2.4],[-7,-23,3],[8,9,2.5]])rocks.push({x,z,size,rotation:random()*6,shade:1});
   rocks.push(FIRST_CONTROL.north,FIRST_CONTROL.south);

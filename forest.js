@@ -1,6 +1,6 @@
 import {nearbyObstacles} from './obstacle-grid.js';
 const nearby=new WeakMap();
-export {createForest} from './forest-scene.js?v=gravel-1';
+export {createForest} from './forest-scene.js?v=nature-6';
 
 export function collideForest(player,obstacles){
   let local=nearby.get(player);if(!local){local=[];nearby.set(player,local);}

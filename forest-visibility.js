@@ -1,11 +1,12 @@
 import * as THREE from './vendor/three.module.js';
 export class ForestVisibility {
  constructor(scene,{maxDistance=Infinity}={}){
+  this.shadowOnly=scene.children.filter(mesh=>mesh.userData.shadowOnly);
   this.maxDistance=maxDistance;this.terrainTiles=[];scene.traverse(mesh=>{if(mesh.userData.terrainTile)this.terrainTiles.push(mesh);});
   this.previousPosition=new THREE.Vector3(Infinity,Infinity,Infinity);this.previousRotation=new THREE.Euler();this.previousFov=0;this.previousAspect=0;this.frustum=new THREE.Frustum();this.view=new THREE.Matrix4();this.matrix=new THREE.Matrix4();this.projection=new THREE.Matrix4();
-  this.batches=scene.children.filter(mesh=>mesh.isInstancedMesh&&mesh.name).map(mesh=>{
+  this.batches=scene.children.filter(mesh=>mesh.isInstancedMesh&&mesh.name&&!mesh.userData.shadowOnly).map(mesh=>{
    mesh.geometry.computeBoundingSphere();
-   const range=/wildflower/.test(mesh.name)?28:/grass/.test(mesh.name)?38:/pebbles|knots/.test(mesh.name)?38:/shrubs|ferns|roots|branches/.test(mesh.name)?65:/clouds|mountain/.test(mesh.name)?900:145;
+   const range=mesh.userData.visibilityRange??(/wildflower/.test(mesh.name)?28:/grass/.test(mesh.name)?38:/pebbles|knots/.test(mesh.name)?38:/shrubs|ferns|roots|branches/.test(mesh.name)?65:/clouds|mountain/.test(mesh.name)?900:145);
    const records=[];
    for(let i=0;i<mesh.count;i++){
     mesh.getMatrixAt(i,this.matrix);const sphere=mesh.geometry.boundingSphere.clone().applyMatrix4(this.matrix);sphere.radius+=.35;
@@ -24,11 +25,13 @@ export class ForestVisibility {
   });
  }
  restoreAll(){
+  for(const mesh of this.shadowOnly)mesh.visible=true;
   // Shadow rebuilds must include offscreen trees, regardless of the last camera cull.
   for(const batch of this.batches){const {mesh,records}=batch;for(let i=0;i<records.length;i++){mesh.instanceMatrix.array.set(records[i].matrix,i*16);if(records[i].color)mesh.instanceColor.array.set(records[i].color,i*3);}mesh.count=records.length;mesh.instanceMatrix.clearUpdateRanges();mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor){mesh.instanceColor.clearUpdateRanges();mesh.instanceColor.needsUpdate=true;}batch.previousCount=-1;batch.selection.fill(-1);}
   this.previousPosition.set(Infinity,Infinity,Infinity);
  }
  update(camera,matrixReady=false){
+  for(const mesh of this.shadowOnly)mesh.visible=false;
   if(camera.position.distanceToSquared(this.previousPosition)<.16&&Math.abs(camera.rotation.y-this.previousRotation.y)<.04&&Math.abs(camera.rotation.x-this.previousRotation.x)<.04&&Math.abs(camera.rotation.z-this.previousRotation.z)<.04&&Math.abs(camera.fov-this.previousFov)<.5&&Math.abs(camera.aspect-this.previousAspect)<.001)return;
   this.previousPosition.copy(camera.position);this.previousRotation.copy(camera.rotation);this.previousFov=camera.fov;this.previousAspect=camera.aspect;
   if(!matrixReady)camera.updateMatrixWorld();this.view.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);// A slightly wider culling frustum prevents edge popping between small updates.
