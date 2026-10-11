@@ -1,7 +1,7 @@
 import {trails} from './landmark-routes.js?v=no-river-1';
 import * as THREE from './vendor/three.module.js';
-import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
-import {START,gridReference,coordinates} from './navigation.js?v=irregular-route-1';
+import {terrainHeight,WORLD_SIZE} from './terrain.js?v=river-1';
+import {START,gridReference,coordinates} from './navigation.js?v=irregular-route-1-r1';
 
 export function addCheckpointPosts(scene,points){
  const groups=[];
@@ -16,8 +16,8 @@ export function addCheckpointPosts(scene,points){
  return groups;
 }
 export class NavigationView {
- constructor(exercise,{springs=[],kit=null}={}){
-  this.exercise=exercise;this.springs=springs;this.kit=kit;this.renderedNotes=null;this.panel=null;this.renderedStage=-1;
+ constructor(exercise,{springs=[],kit=null,rivers=[]}={}){
+  this.exercise=exercise;this.springs=springs;this.rivers=rivers;this.kit=kit;this.renderedNotes=null;this.panel=null;this.renderedStage=-1;
   this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.chart=document.querySelector('#nav-chart');this.chart.width=800;this.chart.height=800;this.updateAssignment();
  }
@@ -42,6 +42,8 @@ export class NavigationView {
   ctx.fillStyle='#e5d9b8';ctx.fillRect(0,0,800,800);
   const colors=['#d5dfc7','#c7d3b6','#b5c5a1','#a4b48b','#91a278','#809367','#71845c','#60734e'];
   for(let y=0;y<span;y+=step)for(let x=0;x<span;x+=step){const wx=x/span*WORLD_SIZE-half,wz=y/span*WORLD_SIZE-half,h=terrainHeight(wx,wz),band=Math.floor((h+25)/7);ctx.fillStyle=colors[Math.max(0,Math.min(colors.length-1,band))];ctx.fillRect(margin+x,margin+y,step,step);const hx=terrainHeight(wx+step/span*WORLD_SIZE,wz),hz=terrainHeight(wx,wz+step/span*WORLD_SIZE);if(Math.floor(h/7)!==Math.floor(hx/7)||Math.floor(h/7)!==Math.floor(hz/7)){ctx.fillStyle='#4b654650';ctx.fillRect(margin+x,margin+y,2,2);}}
+  // Rivers under the paths: tracks cross them at fords.
+  ctx.lineCap='round';ctx.lineJoin='round';for(const river of this.rivers){ctx.beginPath();river.points.forEach((p,i)=>i?ctx.lineTo(px(p.x),pz(p.z)):ctx.moveTo(px(p.x),pz(p.z)));ctx.strokeStyle='#3d6f8e';ctx.lineWidth=river.main?5:3;ctx.stroke();}
   for(const route of trails){ctx.beginPath();for(let z=route.start;z<=route.end;z+=2){z===route.start?ctx.moveTo(px(route.center(z)),pz(z)):ctx.lineTo(px(route.center(z)),pz(z));}ctx.strokeStyle='#7c5c3f';ctx.lineWidth=2.5;ctx.stroke();}
   for(const spring of this.springs){ctx.beginPath();ctx.arc(px(spring.x),pz(spring.z),8,0,Math.PI*2);ctx.fillStyle='#3d6f8e';ctx.fill();ctx.strokeStyle='#e5d9b8';ctx.lineWidth=1.5;ctx.stroke();}
   ctx.strokeStyle='#3c483d66';ctx.lineWidth=1;ctx.fillStyle='#303b31';ctx.font='bold 23px monospace';ctx.textAlign='center';
@@ -51,10 +53,10 @@ export class NavigationView {
   ctx.textAlign='center';ctx.font='bold 24px monospace';
   const mark=(p,text,color)=>{ctx.strokeStyle=color;ctx.fillStyle='#f5ecd6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(px(p.x),pz(p.z),10,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.fillText(text,px(p.x)+22,pz(p.z)-14);};
   mark(START,'START','#303b31');for(const p of this.exercise.revealed)mark(p,p.code,p===this.exercise.current?'#8e3e2d':'#52614d');
-  ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m · Blue: spring`,48,772);
+  ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m · Blue: water`,48,772);
   // Kit and condition, pencilled along the bottom margin.
   this.renderedNotes=this.kit?.packed?this.kit.notes:null;if(this.renderedNotes){ctx.font='bold 14px monospace';ctx.fillStyle='#4a3c2a';ctx.fillText(this.renderedNotes,48,794);}
   this.chart.dispatchEvent(new Event('chart-updated'));
-  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Blue dots: springs · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
+  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Blue lines: river and streams · Blue dots: springs · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
  }
 }

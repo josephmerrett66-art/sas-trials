@@ -1,7 +1,7 @@
-import {landmarkMaterial} from './landmark-builder.js?v=1';
+import {landmarkMaterial} from './landmark-builder.js?v=1-r1';
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight} from './terrain.js?v=gullies-1';
+import {terrainHeight} from './terrain.js?v=river-1';
 import {SECOND_CONTROL} from './second-control.js?v=irregular-route-1';
 
 // Build once: all body panels, burned interior, wheels and corrosion share one draw.

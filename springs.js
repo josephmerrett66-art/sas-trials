@@ -1,9 +1,9 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
+import {terrainHeight,WORLD_SIZE,riverClearance} from './terrain.js?v=river-1';
 import {trailClearance} from './landmark-routes.js?v=no-river-1';
-import {START} from './navigation.js?v=irregular-route-1';
-import {landmarkMaterial} from './landmark-builder.js?v=1';
+import {START} from './navigation.js?v=irregular-route-1-r1';
+import {landmarkMaterial} from './landmark-builder.js?v=1-r1';
 
 export const SPRING_REACH=3.2;
 // Springs sit at the bottom of natural hollows, away from trees, tracks and checkpoints,
@@ -18,7 +18,7 @@ export function findSprings(obstacles,points,{spacing=260}={}){
   let best={x,z,h};for(let dz=-8;dz<=8;dz++)for(let dx=-8;dx<=8;dx++){const y=terrainHeight(x+dx,z+dz);if(y<best.h)best={x:x+dx,z:z+dz,h:y};}
   candidates.push({...best,depth},{x,z,h,depth:depth-.001});
  }
- const clear=p=>obstacles.every(o=>Math.hypot(p.x-o.x,p.z-o.z)>o.radius+4)&&trailClearance(p.x,p.z)>4&&points.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>40)&&Math.hypot(p.x-START.x,p.z-START.z)>60;
+ const clear=p=>riverClearance(p.x,p.z)>25&&obstacles.every(o=>Math.hypot(p.x-o.x,p.z-o.z)>o.radius+4)&&trailClearance(p.x,p.z)>4&&points.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>40)&&Math.hypot(p.x-START.x,p.z-START.z)>60;
  const springs=[];
  for(const p of candidates.filter(clear).sort((a,b)=>b.depth-a.depth||a.x-b.x||a.z-b.z))if(springs.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>spacing))springs.push({x:p.x,z:p.z,y:terrainHeight(p.x,p.z)});
  return springs;

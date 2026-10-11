@@ -1,7 +1,7 @@
-import {stonePathSites,drapeStoneMaterial,trimStoneUndersides} from './stone-path.js?v=1';
+import {stonePathSites,drapeStoneMaterial,trimStoneUndersides} from './stone-path.js?v=1-r1';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
-import {terrainHeight,terrainNormal} from './terrain.js';
+import {terrainHeight,terrainNormal,riverClearance} from './terrain.js?v=river-1';
 import {trails,trailClearance} from './landmark-routes.js';
 export async function loadNatureDetails(){
  const names=await (await fetch(new URL('./assets/nature-details/manifest.json',import.meta.url))).json(),loader=new GLTFLoader(),models=new Map(),textures=new Map();
@@ -21,7 +21,7 @@ export function addNatureDetails(scene,models,rocks,trees){
  // Families occupy coherent habitats: flowers at sunny margins, ferns in groves,
  // mushrooms by trunks, pebbles by rocks, and fallen petals beside flowers.
  for(let i=0;i<trees.length;i+=7){const t=trees[i],field=Math.sin(t.x*.023)+Math.cos(t.z*.017),names=detailNames.filter(n=>n.startsWith('Pebble')||n.startsWith('Mushroom')||n.startsWith('Petal')|| (field>0?/Flower|Clover|Plant/.test(n):/Fern|Bush|Plant/.test(n)));
- for(let j=0;j<4;j++){const name=names[(i+j)%names.length],angle=random()*Math.PI*2,distance=name.startsWith('Mushroom')?.7:1.3+random()*3,x=t.x+Math.sin(angle)*distance,z=t.z+Math.cos(angle)*distance;if(trailClearance(x,z)<1.2)continue;let width=/Bush/.test(name)?1.1:/Fern|Plant/.test(name)?.7:/Flower|Clover/.test(name)?.5:/Pebble/.test(name)?.15:.22;sites.get(name).push({x,z,width:width*(.8+random()*.4),rotation:angle,shade:.86+random()*.14,y:name==='Mushroom_Laetiporus'?.6:0});}}
+ for(let j=0;j<4;j++){const name=names[(i+j)%names.length],angle=random()*Math.PI*2,distance=name.startsWith('Mushroom')?.7:1.3+random()*3,x=t.x+Math.sin(angle)*distance,z=t.z+Math.cos(angle)*distance;if(trailClearance(x,z)<1.2||riverClearance(x,z)<1)continue;let width=/Bush/.test(name)?1.1:/Fern|Plant/.test(name)?.7:/Flower|Clover/.test(name)?.5:/Pebble/.test(name)?.15:.22;sites.get(name).push({x,z,width:width*(.8+random()*.4),rotation:angle,shade:.86+random()*.14,y:name==='Mushroom_Laetiporus'?.6:0});}}
  for(const [name,items] of sites)batch(name,items,/Pebble|Petal/.test(name)?35:55);
  scene.userData.natureDetails={models:models.size,stonePathTiles:path.length,families:Object.fromEntries([...sites].map(([n,a])=>[n,a.length])),detailItems:[...sites.values()].reduce((n,a)=>n+a.length,0)};
 }

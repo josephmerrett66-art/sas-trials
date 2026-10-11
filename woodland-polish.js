@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {trails,trailClearance} from './landmark-routes.js?v=no-river-1';
-import {WORLD_SIZE} from './terrain.js?v=gullies-1';
+import {WORLD_SIZE,riverClearance} from './terrain.js?v=river-1';
 
 function triangles(positions,colors=null){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));if(colors)geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();return geometry;}
 function merge(core,detail){const base=core.index?core.toNonIndexed():core;base.deleteAttribute('uv');const result=mergeGeometries([base,detail]);if(base!==core)base.dispose();core.dispose();detail.dispose();result.computeBoundingSphere();return result;}
@@ -34,7 +34,7 @@ export function flowerPatchGeometry(){
 }
 export function flowerSites(){
  let seed=1953;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};const sites=[];
- const add=(x,z)=>{if(trailClearance(x,z)<.65||Math.hypot(x,z-12)<2.5)return;sites.push({x,z,size:.75+random()*.5,rotation:random()*6.28,shade:.85+random()*.15});};
+ const add=(x,z)=>{if(trailClearance(x,z)<.65||riverClearance(x,z)<.5||Math.hypot(x,z-12)<2.5)return;sites.push({x,z,size:.75+random()*.5,rotation:random()*6.28,shade:.85+random()*.15});};
  for(const [x,z] of [[-3.8,5],[4.4,-7],[-4.6,-17],[7,-27],[-7,24]])add(x,z);
  for(let i=0;i<550;i++)add((random()-.5)*(WORLD_SIZE-40),(random()-.5)*(WORLD_SIZE-40));
  for(const trail of trails)for(let z=trail.start+15;z<trail.end-15;z+=38+random()*35){const side=random()<.5?-1:1;add(trail.center(z)+side*(trail.width(z)+2+random()*3),z);}

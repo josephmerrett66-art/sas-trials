@@ -1,4 +1,4 @@
-import {hydrationWord,energyWord} from './kit.js?v=1';
+import {hydrationWord,energyWord} from './kit.js?v=river-1';
 
 // Touch only: keyboard and Xbox players already have V, B and G. One button opens a small
 // paper sheet with the bergen's contents and the actions that need a key elsewhere.
@@ -24,7 +24,7 @@ export class InventoryView {
   this.sheet.querySelector('#kit-contents').innerHTML=`<span>Water <b>${kit.water.toFixed(1)} L</b></span><span>Rations <b>${kit.rations}</b></span><span>Hydration <b>${hydrationWord(kit.hydration)}</b></span><span>Energy <b>${energyWord(kit.energy)}</b></span>${kit.sick>0?'<span><b>Unwell</b></span>':''}`;
   this.sheet.querySelector('#kit-message').textContent=kit.message;
   this.buttons.drink.disabled=kit.water<=.001;this.buttons.eat.disabled=kit.rations<=0;
-  this.buttons.fill.disabled=!spring;this.buttons.fill.textContent=spring?'Fill at spring':'No spring here';
+  this.buttons.fill.disabled=!spring;this.buttons.fill.textContent=spring?'Fill bottles':'No water here';
   this.buttons.register.hidden=!post;this.buttons.register.textContent=post?`Register post ${post.code}`:'';
  }
 }

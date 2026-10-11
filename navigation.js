@@ -1,7 +1,7 @@
 import {CONTROL_LANDMARKS} from './control-landmarks.js?v=irregular-route-1';
 import {SECOND_CONTROL} from './second-control.js?v=irregular-route-1';
 import {FIRST_CONTROL} from './first-control.js?v=1';
-import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
+import {terrainHeight,WORLD_SIZE} from './terrain.js?v=river-1';
 export const START={x:0,z:12};
 export const bearing=yaw=>((Math.round(-yaw*180/Math.PI)%360)+360)%360;
 export function gridReference(x,z,size=WORLD_SIZE){const cell=size/8;return String.fromCharCode(65+Math.max(0,Math.min(7,Math.floor((x+size/2)/cell))))+(Math.max(0,Math.min(7,Math.floor((z+size/2)/cell)))+1);}

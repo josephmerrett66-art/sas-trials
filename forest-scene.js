@@ -1,11 +1,11 @@
-import {addNatureDetails} from './nature-details.js?v=2';
+import {addNatureDetails} from './nature-details.js?v=2-r1';
 import {meadowGrassGeometry,distantGrassGeometry} from './meadow-grass.js?v=1';
-import {woodlandField,addNatureTrees} from './nature-trees.js?v=8';
-import {refineConifer,broadleafGeometry,flowerPatchGeometry,flowerSites} from './woodland-polish.js?v=1';
+import {woodlandField,addNatureTrees} from './nature-trees.js?v=8-r1';
+import {refineConifer,broadleafGeometry,flowerPatchGeometry,flowerSites} from './woodland-polish.js?v=1-r1';
 import {controlLandmarkClearing} from './control-landmarks.js?v=irregular-route-1';
-import {createUniqueLandmarks} from './unique-landmarks.js?v=irregular-route-1';
+import {createUniqueLandmarks} from './unique-landmarks.js?v=irregular-route-1-r1';
 import {SECOND_CONTROL,secondControlClearing} from './second-control.js?v=irregular-route-1';
-import {createWreckLandmark} from './wreck-landmark.js?v=irregular-route-1';
+import {createWreckLandmark} from './wreck-landmark.js?v=irregular-route-1-r1';
 import {FIRST_CONTROL,firstControlClearing,isControlBoulder} from './first-control.js?v=1';
 import {trailClearance,trailCenter,trails} from './landmark-routes.js?v=no-river-1';
 import {tileTerrain} from './terrain-tiles.js';
@@ -13,14 +13,14 @@ import * as THREE from './vendor/three.module.js';
 import {createGroundMaterial} from './ground-material.js?v=gravel-1';
 import {createSurfaceMaterial} from './surface-material.js?v=details-1';
 
-import {terrainHeight,terrainNormal,WORLD_SIZE,TERRAIN_SEGMENTS} from './terrain.js?v=gullies-1';
+import {terrainHeight,terrainNormal,WORLD_SIZE,TERRAIN_SEGMENTS,riverClearance} from './terrain.js?v=river-1';
 export {trailCenter};
 export function createForest(scene,natureModels=null){
   let seed=417;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   const span=WORLD_SIZE-20,areaScale=(span/620)**2,lengthScale=span/620;
   const obstacles=[],transform=new THREE.Object3D(),shade=new THREE.Color();
   const material=(color,extra={})=>new THREE.MeshStandardMaterial({color,flatShading:true,roughness:1,...extra});
-  const outsideTrail=(x,z,margin=3.5)=>trailClearance(x,z)>margin-2.15&&Math.hypot(x,z-8)>5;
+  const outsideTrail=(x,z,margin=3.5)=>trailClearance(x,z)>margin-2.15&&Math.hypot(x,z-8)>5&&riverClearance(x,z)>margin-1.5;
   const batch=(name,geometry,mat,items,place,decorative=false)=>{
     if(natureModels?.details&&/Trail pebbles|Low angular shrubs|Star-shaped forest ferns|woodland wildflower/.test(name)){geometry.dispose();mat.dispose();return null;}
     if(natureModels&&/exposed branches|trunk roots|bark knots/.test(name)){geometry.dispose();mat.dispose();return null;}
@@ -123,18 +123,18 @@ export function createForest(scene,natureModels=null){
   const grassPatch=(x,z)=>.5+.28*Math.sin(x*.18+Math.sin(z*.09)*2)+.22*Math.cos(z*.15-x*.07);
   for(let i=0;i<Math.round(66000*areaScale);i++){
     const x=(random()-.5)*span,z=(random()-.5)*span,patch=grassPatch(x,z),grove=woodlandField(x,z).grove;
-    if(trailClearance(x,z)<1.5||Math.hypot(x,z-8)<2.8||random()>(.22+patch*.78))continue;
+    if(trailClearance(x,z)<1.5||riverClearance(x,z)<.3||Math.hypot(x,z-8)<2.8||random()>(.22+patch*.78))continue;
     grass.push({x,z,size:.72+patch*.6+random()*.35,rotation:random()*6,shade:.72+patch*.22+(grove<-.5?.06:0),width:1.3+patch*.4});
   }
   for(let i=0;i<Math.round(6500*lengthScale);i++){
     const route=trails[Math.floor(random()*trails.length)],z=route.start+random()*(route.end-route.start),side=random()<.5?-1:1,x=route.center(z)+side*(route.width(z)+1.5+random()*3.5),patch=grassPatch(x,z);
-    if(trailClearance(x,z)<1.5||Math.hypot(x,z-8)<3||patch<.25)continue;
+    if(trailClearance(x,z)<1.5||riverClearance(x,z)<.3||Math.hypot(x,z-8)<3||patch<.25)continue;
     grass.push({x,z,size:.85+patch*.65+random()*.25,rotation:random()*6,shade:.78+patch*.22,width:1.5});
   }
   const grassSeed=seed;
   for(let i=0;i<Math.round(66000*areaScale);i++){
     const x=(random()-.5)*span,z=(random()-.5)*span,patch=grassPatch(x,z);
-    if(trailClearance(x,z)<1.5||Math.hypot(x,z-8)<2.8||random()>(.22+patch*.78))continue;
+    if(trailClearance(x,z)<1.5||riverClearance(x,z)<.3||Math.hypot(x,z-8)<2.8||random()>(.22+patch*.78))continue;
     grass.push({x,z,size:.72+patch*.6+random()*.35,rotation:random()*6,shade:.72+patch*.22,width:1.3+patch*.4});
   }
   seed=grassSeed;

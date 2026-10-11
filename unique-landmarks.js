@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
-import {buildLandmark} from './landmark-builder.js?v=1';
+import {buildLandmark} from './landmark-builder.js?v=1-r1';
 import {CONTROL_LANDMARKS} from './control-landmarks.js?v=irregular-route-1';
-import {terrainHeight} from './terrain.js?v=gullies-1';
+import {terrainHeight} from './terrain.js?v=river-1';
 const rust=0x8e5133,wood=0x6f5031,dark=0x292f2a,stone=0x8e9285,metal=0x555b58,blue=0x426975;
 const builders={
  tank({box,part}){

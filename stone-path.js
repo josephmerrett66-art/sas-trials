@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {terrainHeight,WORLD_SIZE,TERRAIN_SEGMENTS,TERRAIN_STEP} from './terrain.js';
+import {terrainHeight,WORLD_SIZE,TERRAIN_SEGMENTS,TERRAIN_STEP} from './terrain.js?v=river-1';
 let heightTexture;
 export function stonePathSites(routes,model){
  const sites=[];

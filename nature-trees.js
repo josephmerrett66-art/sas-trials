@@ -1,4 +1,4 @@
-import {loadNatureDetails} from './nature-details.js?v=2';
+import {loadNatureDetails} from './nature-details.js?v=2-r1';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 

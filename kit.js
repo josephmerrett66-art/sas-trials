@@ -1,7 +1,7 @@
 // Bergen packing and field condition. Pure state: no DOM or rendering, so it can be tested in node.
 export const BASE_WEIGHT=6; // bergen, clothing, map, compass and torch
 export const ITEMS=[
- {id:'water',name:'Water bottle (1 L, full)',note:'Drink on the move. Refill at springs.',weight:1.15,max:6,start:2},
+ {id:'water',name:'Water bottle (1 L, full)',note:'Drink on the move. Refill at springs and rivers.',weight:1.15,max:6,start:2},
  {id:'rations',name:'Ration pack',note:'Restores energy.',weight:.6,max:6,start:2},
  {id:'filter',name:'Water filter',note:'Spring water is safe to drink.',weight:.3,max:1,start:1},
  {id:'waterproof',name:'Waterproof jacket',note:'Rain no longer saps your energy.',weight:1.1,max:1,start:0},

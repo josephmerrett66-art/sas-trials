@@ -1,3 +1,18 @@
+# River network
+
+One river crosses the map from the east edge to the south-west corner, joined by six streams (about 4.8 km of water in all). It is worked out once from the terrain when the game loads, in `hydrology.js`:
+
+- The river finds the cheapest route downhill through the lowest ground, so it winds between the hills instead of running in a line. Flow is then gathered along that drainage, and each stream follows the valley that collects the most water and joins the first water it reaches.
+- Meanders are sine-generated bends whose size depends on the slope, and they never climb the valley side.
+- The water level never rises downstream and always sits below the lowest ground across the floodplain. Where the land ahead rises, the river cuts a water gap through it instead of floating. The terrain is reshaped around each channel: a bed, a low floodplain, then a smooth blend back to the original hills. The start clearing, every post and every control feature are kept dry and unchanged.
+- `river.js` builds one level water ribbon per channel, with its edges hidden under the banks. It reuses the existing ripple shader and terrain-tile culling, with no new lights, shadows, reflections or transparency.
+- Rivers and streams are drawn on the chart in blue beneath the tracks; tracks cross them at fords. Trees, grass, flowers and springs are kept off the water.
+- Wading slows you, down to a little over half pace in the deepest water. G / Xbox X (or Fill bottles on the phone KIT sheet) refills at the river as well as at springs; the same untreated-water rule applies.
+
+Checks: tests/river.mjs covers downhill flow on every channel, branching, matching junction levels, water over every bed, banks above the water edge, dry posts and start, and bounded water tiles. All tests pass; the forest tree count changed (24,388 to 23,544) because trees no longer grow in the channels. Browser-checked riverbanks, a junction and the chart: artifacts/river-network-bank.png, river-network-junction.png and river-network-chart.png. The `?benchmark=1&weapon=1` stress test could not be measured in the cloud (software rendering, about 3 FPS), so frame times on the development Mac still need checking.
+
+The older river notes further down describe earlier attempts that were removed; `drainage.js` and `river-profile.js` are gone.
+
 # Bergen packing and field condition
 
 Every attempt now starts at a kit list. BEGIN EXERCISE opens **Pack your bergen**: a fixed 6 kg base (bergen, clothing, map, compass, torch) plus water bottles (1.15 kg full, up to 6), ration packs (0.6 kg, up to 6), a water filter, a waterproof jacket and a stove. The total weight sets walking pace: full pace up to 8 kg, then about 3% slower per kilogram, never below 60%. Weight falls as water is drunk and rations eaten. STEP OFF locks the loadout until the exercise is reset.

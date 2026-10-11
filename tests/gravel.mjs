@@ -10,4 +10,4 @@ const shader={uniforms:{},vertexShader:'#include <common>\n#include <begin_verte
 const scene=new THREE.Scene();createForest(scene);const path=scene.getObjectByName('Winding dirt trail');let variations=0;const shared=new Map();
 for(const tile of path.children){assert.equal(tile.material.flatShading,false);assert.ok(!tile.geometry.attributes.color);const p=tile.geometry.attributes.position,n=tile.geometry.attributes.normal;
  for(let i=0;i<p.count;i++){const key=`${p.getX(i).toFixed(3)},${p.getZ(i).toFixed(3)}`,normal=[n.getX(i),n.getY(i),n.getZ(i)],old=shared.get(key);if(old)for(let j=0;j<3;j++)assert.ok(Math.abs(old[j]-normal[j])<.00002);else shared.set(key,normal);if(i%3&&Math.abs(n.getY(i)-n.getY(i-1))>.00001)variations++;}
-}assert.ok(variations>100);assert.equal(scene.userData.forestStats.trees,24388);console.log('Passed cached mipmapped gravel, single sample shader, smooth shared path normals, preserved forest layout.');
+}assert.ok(variations>100);assert.equal(scene.userData.forestStats.trees,23544);console.log('Passed cached mipmapped gravel, single sample shader, smooth shared path normals, preserved forest layout.');

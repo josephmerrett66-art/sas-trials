@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 
-import {terrainHeight,terrainNormal} from './terrain.js?v=gullies-1';
+import {terrainHeight,terrainNormal} from './terrain.js?v=river-1';
 // Reuse a fixed pool so long sessions don't accumulate meshes or draw calls.
 export class Footprints {
   constructor(scene,capacity=2048){
