@@ -1,3 +1,4 @@
+import {landmarkMaterial} from './landmark-builder.js?v=1';
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {terrainHeight} from './terrain.js?v=gullies-1';
@@ -43,7 +44,7 @@ export function createWreckLandmark(scene){
  box(.96,.22,.06,char,0,.82,-2.73); // empty grille
  for(const x of [-.76,.76]){box(.39,.19,.07,0x9a9b80,x,.86,-2.73);box(.3,.13,.06,0x77352b,x,.88,2.73);}
  const geometry=mergeGeometries(pieces,false);for(const piece of pieces)piece.dispose();geometry.computeBoundingSphere();
- const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:.08,flatShading:true});
+ const material=landmarkMaterial();
  const mesh=new THREE.InstancedMesh(geometry,material,1);mesh.name='Burned-out rusted car';
  const car=SECOND_CONTROL.car;position.set(car.x,terrainHeight(car.x,car.z),car.z);
  const slopeX=(terrainHeight(car.x+1,car.z)-terrainHeight(car.x-1,car.z))/2;

@@ -1,3 +1,4 @@
+import {CONTROL_LANDMARKS} from './control-landmarks.js?v=1';
 import {SECOND_CONTROL} from './second-control.js?v=wreck-1';
 import {FIRST_CONTROL} from './first-control.js?v=1';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
@@ -5,12 +6,12 @@ export const START={x:0,z:12};
 export const bearing=yaw=>((Math.round(-yaw*180/Math.PI)%360)+360)%360;
 export function gridReference(x,z,size=WORLD_SIZE){const cell=size/8;return String.fromCharCode(65+Math.max(0,Math.min(7,Math.floor((x+size/2)/cell))))+(Math.max(0,Math.min(7,Math.floor((z+size/2)/cell)))+1);}
 export function makeCheckpoints(obstacles=[]){
- const half=WORLD_SIZE/2;
- const clear=(x,z)=>obstacles.every(o=>Math.hypot(x-o.x,z-o.z)>o.radius+1.3);
- const find=(x,z)=>{for(let radius=0;radius<=32;radius+=2)for(let i=0;i<24;i++){const angle=i*Math.PI/12,px=x+Math.cos(angle)*radius,pz=z+Math.sin(angle)*radius;if(Math.abs(px)<half-45&&Math.abs(pz)<half-45&&clear(px,pz))return {x:px,z:pz};}throw Error('No accessible checkpoint site');};
- // Clockwise circuit through the outer valleys and ridges; coordinates stay private until each leg is unlocked.
- const sites=[[-.36,-.40],[.40,-.42],[.42,-.03],[.40,.40],[-.05,.42],[-.42,.40],[-.42,-.05],[-.08,-.42]];
- return sites.map(([x,z],i)=>{const p=i===0?FIRST_CONTROL.post:i===1?SECOND_CONTROL.post:find(x*WORLD_SIZE,z*WORLD_SIZE);return {code:String.fromCharCode(65+i),...p,y:terrainHeight(p.x,p.z),grid:gridReference(p.x,p.z),title:'Wilderness circuit',...(i===0?{feature:FIRST_CONTROL.north,attack:FIRST_CONTROL.attack,title:'Twin boulders',postRotation:Math.PI/2,controlDescription:'Northern boulder of the pair, east side.'}:i===1?{feature:SECOND_CONTROL.car,title:'Burned-out car',postRotation:0,controlDescription:'Burned-out car, rear (south) end.'}:{}),description:i===0?'Follow the valley trail north to its west-facing bend in grid D1. Use the bend as your approach point, then head northwest to the two boulders. Identify the northern rock and check its east side for post A. Match the letter before registering.':i===1?'Navigate to grid H1 and search for the rusty burned-out car. Its empty windows, buckled bonnet and scorched interior make it unlike anything else in the forest. Find post B behind the rear bumper, at the south end of the wreck. Match the letter before registering.':'Use the chart and compass to choose your route to these coordinates. The wooden post holds the next destination; register it when you arrive.'};});
+ const controls=[
+  {post:FIRST_CONTROL.post,feature:FIRST_CONTROL.north,attack:FIRST_CONTROL.attack,title:'Twin boulders',postRotation:Math.PI/2,controlDescription:'Northern boulder of the pair, east side.',description:'Follow the valley trail north to its west-facing bend in grid D1. Use the bend as your approach point, then head northwest to the two boulders. Identify the northern rock and check its east side for post A. Match the letter before registering.'},
+  {post:SECOND_CONTROL.post,feature:SECOND_CONTROL.car,title:'Burned-out car',postRotation:0,controlDescription:'Burned-out car, rear (south) end.',description:'Navigate to grid H1 and search for the rusty burned-out car. Its empty windows, buckled bonnet and scorched interior make it unlike anything else in the forest. Find post B behind the rear bumper, at the south end of the wreck. Match the letter before registering.'},
+  ...CONTROL_LANDMARKS.map(c=>({...c,title:c.name,description:c.description+' Match the letter before registering.'}))
+ ];
+ return controls.map((control,i)=>{const {post,kind,radius,height,name,...clue}=control;return {...clue,code:String.fromCharCode(65+i),...post,y:terrainHeight(post.x,post.z),grid:gridReference(post.x,post.z)};});
 }
 export const coordinates=p=>({east:Math.round(p.x+WORLD_SIZE/2),north:Math.round(WORLD_SIZE/2-p.z)});
 export class NavigationExercise {

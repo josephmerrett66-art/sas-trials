@@ -1,5 +1,7 @@
+import {controlLandmarkClearing} from './control-landmarks.js?v=1';
+import {createUniqueLandmarks} from './unique-landmarks.js?v=1';
 import {SECOND_CONTROL,secondControlClearing} from './second-control.js?v=wreck-1';
-import {createWreckLandmark} from './wreck-landmark.js?v=1';
+import {createWreckLandmark} from './wreck-landmark.js?v=shared-1';
 import {FIRST_CONTROL,firstControlClearing,isControlBoulder} from './first-control.js?v=1';
 import {trailClearance,trailCenter,trails} from './landmark-routes.js?v=no-river-1';
 import {tileTerrain} from './terrain-tiles.js';
@@ -132,13 +134,14 @@ export function createForest(scene){
   for(const mesh of scene.children){if(!mesh.isInstancedMesh||/clouds|mountain/.test(mesh.name))continue;
    let kept=0;for(let i=0;i<mesh.count;i++){const x=mesh.instanceMatrix.array[i*16+12],z=mesh.instanceMatrix.array[i*16+14];
     if(firstControlClearing(x,z)&&!(mesh.name==='Large faceted boulders'&&isControlBoulder(x,z)))continue;
-    if(secondControlClearing(x,z))continue;
+    if(secondControlClearing(x,z)||controlLandmarkClearing(x,z))continue;
     if(kept!==i){mesh.instanceMatrix.array.copyWithin(kept*16,i*16,(i+1)*16);if(mesh.instanceColor)mesh.instanceColor.array.copyWithin(kept*3,i*3,(i+1)*3);}kept++;
    }mesh.count=kept;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.computeBoundingSphere();
   }
   scene.userData.forestStats={worldSize:WORLD_SIZE,areaMultiplier:WORLD_SIZE**2/280**2,expansionFromNavigation:WORLD_SIZE**2/640**2,trees:trees.length,species:Object.fromEntries(species.map((name,i)=>[name,trees.filter(t=>t.species===i).length])),grassClumps:grass.length,boulders:rocks.length,shrubs:bushes.length,obstacles:obstacles.length};
-  const cleared=obstacles.filter(o=>(!firstControlClearing(o.x,o.z)||isControlBoulder(o.x,o.z))&&!secondControlClearing(o.x,o.z));
+  const cleared=obstacles.filter(o=>(!firstControlClearing(o.x,o.z)||isControlBoulder(o.x,o.z))&&!secondControlClearing(o.x,o.z)&&!controlLandmarkClearing(o.x,o.z));
   createWreckLandmark(scene);
   for(const offset of [-1.5,0,1.5]){const x=SECOND_CONTROL.car.x,z=SECOND_CONTROL.car.z+offset;cleared.push({x,z,baseY:terrainHeight(x,z),radius:1.35,height:2.1});}
+  createUniqueLandmarks(scene,cleared);
   return cleared;
 }

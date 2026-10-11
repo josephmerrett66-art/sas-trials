@@ -5,7 +5,7 @@ const scene=new THREE.Scene(),obstacles=createForest(scene);
 assert.ok(scene.userData.forestStats.grassClumps>7000);
 assert.ok(scene.userData.forestStats.trees>600);assert.equal(Object.keys(scene.userData.forestStats.species).length,6);assert.ok(Object.values(scene.userData.forestStats.species).every(count=>count>20));
 assert.ok(scene.userData.forestStats.boulders>200);
-assert.ok(scene.children.length<=24);
+assert.ok(scene.children.length<=30);
 assert.ok(obstacles.every(o=>Number.isFinite(o.x)&&Number.isFinite(o.z)&&o.radius>0));
 assert.ok(!obstacles.some(o=>Math.hypot(o.x,o.z-8)<o.radius+.3));
 const paths=scene.children.filter(o=>o.name==='Winding dirt trail');assert.equal(paths.length,1);

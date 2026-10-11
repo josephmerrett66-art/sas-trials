@@ -1,7 +1,7 @@
 import {trails} from './landmark-routes.js?v=no-river-1';
 import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
-import {START,gridReference,coordinates} from './navigation.js?v=wreck-control-1';
+import {START,gridReference,coordinates} from './navigation.js?v=all-controls-1';
 
 export function addCheckpointPosts(scene,points){
  const groups=[];
