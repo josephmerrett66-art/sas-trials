@@ -3,7 +3,7 @@ import {ForestWeather} from './weather.js?v=recorded-audio-1';
 import {mainTrail} from './landmark-routes.js?v=no-river-1';
 import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
-import {Controller,defaults} from './controller.js';
+import {Controller,defaults} from './controller.js?v=baseplate-1';
 import {GamepadInput} from './gamepad.js';
 import {createForest,collideForest} from './forest.js?v=no-river-1';
 import {MovementFeel,LookSway} from './feel.js?v=recorded-audio-1';
@@ -15,12 +15,12 @@ import {FrameMonitor} from './frame-monitor.js';
 import {GpuTimer} from './gpu-timer.js';
 import {ForestTorch,installTorchOptics} from './torch.js';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=no-river-1';
-import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=always-held-1';
-import {HeldNavigation} from './held-navigation.js?v=always-held-1';
+import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=baseplate-1';
+import {HeldNavigation} from './held-navigation.js?v=baseplate-1';
 
 const params=new URLSearchParams(location.search),benchmark=params.has('benchmark');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9cbdd0);scene.fog=new THREE.Fog(0x9cbdd0,35,90);
-const camera=new THREE.PerspectiveCamera(85,innerWidth/innerHeight,.05,900);camera.rotation.order='YXZ';scene.add(camera);
+const camera=new THREE.PerspectiveCamera(defaults.fov,innerWidth/innerHeight,.05,900);camera.rotation.order='YXZ';scene.add(camera);
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);document.querySelector('#world').appendChild(renderer.domElement);
 const renderBudget=new RenderBudget(renderer);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);
 const hemisphere=new THREE.HemisphereLight(0xd9edff,0x5d6240,1.2),sunlight=new THREE.DirectionalLight(0xffe0ac,1.7);sunlight.position.set(-30,50,20);scene.add(hemisphere,sunlight);
@@ -80,7 +80,7 @@ renderer.setAnimationLoop(now=>{
  const physicsStart=performance.now();
  if(active&&!view.blocking){if(pad){player.yaw-=pad.look.x*player.config.stickSensitivity*dt;player.pitch=THREE.MathUtils.clamp(player.pitch-pad.look.y*player.config.stickSensitivity*dt,-Math.PI/2+.01,Math.PI/2-.01);}movementInput.clear();for(const key of keys)movementInput.add(key);if(pad){if(pad.jump)movementInput.add('Space');if(pad.crouch)movementInput.add('KeyC');if(pad.sprint)movementInput.add('ShiftLeft');}accumulator+=dt;while(accumulator>=1/120){const grounded=player.grounded,fall=-player.vy;player.step(1/120,movementInput,hud.bunny.checked,pad?.move);collideForest(player,obstacles);if(!grounded&&player.grounded)feel.landed(fall);if(grounded&&!player.grounded)feel.jumped();feel.step(1/120,player,player.config.juice);accumulator-=1/120;}exercise.step(dt,player);}else {player.vx=player.vz=0;feel.step(0,player,player.config.juice);exercise.messageTime=Math.max(0,exercise.messageTime-dt);}
  const physicsEnd=performance.now(),motion=feel.output,lookMotion=lookSway.step(dt,active&&!view.blocking?(pad?.look.x??0):0,active&&!view.blocking?(pad?.look.y??0):0,player.config.juice,0),leanMotion=lean.step(dt,active&&!view.blocking?leanInput(keys,pad):0,player,obstacles);
- camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);heldNavigation.update(player,active&&!view.blocking?dt:0,feel,active);view.updateCompass(heldNavigation.heading,dt);torch.step(active?dt:0,player);camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,torch.dark,torch.on,sunlight,hemisphere,forestVisibility);soundscape.step(dt,weather.state.rain,weather.volume);
+ camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);heldNavigation.update(player,active&&!view.blocking?dt:0,feel,active);torch.step(active?dt:0,player);camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,torch.dark,torch.on,sunlight,hemisphere,forestVisibility);soundscape.step(dt,weather.state.rain,weather.volume);
  frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
  const updateEnd=performance.now();for(const post of checkpointPosts){const dx=post.position.x-camera.position.x,dz=post.position.z-camera.position.z;post.visible=dx*dx+dz*dz<(scene.fog.far+4)**2;}scene.updateMatrixWorld();forestVisibility.update(camera,true);const cullEnd=performance.now();gpuTimer.begin();if(benchmarkProbe)renderer.clear();else renderer.render(scene,camera);gpuTimer.end();const cpu=performance.now()-cpuStart;frameMonitor.sample(now,cpu,renderer.info.render,{physicsMs:physicsEnd-physicsStart,updateMs:updateEnd-physicsEnd,cullMs:cullEnd-updateEnd,renderMs:performance.now()-cullEnd});renderBudget.sample(frameMs,cpu,true,gpuTimer.ms);
 });

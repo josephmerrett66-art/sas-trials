@@ -1,0 +1,20 @@
+[
+  {
+    "max": "110",
+    "min": "65",
+    "setting": "Field of view",
+    "value": "65"
+  },
+  {
+    "max": "5",
+    "min": "0.5",
+    "setting": "Stick look speed",
+    "value": "5"
+  },
+  {
+    "max": "2",
+    "min": "0",
+    "setting": "Camera motion",
+    "value": "1.5"
+  }
+]

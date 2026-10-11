@@ -18,11 +18,7 @@ export function addCheckpointPosts(scene,points){
 export class NavigationView {
  constructor(exercise){
   this.exercise=exercise;this.panel=null;this.renderedStage=-1;
-  this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.compass=document.querySelector('#compass');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
-  this.compassCard=document.querySelector('#compass-card');this.bearing=document.querySelector('#bearing');this.compass.hidden=false;this.compassAngle=Infinity;this.compassTick=0;this.lastBearing=-1;
-  const directions=['N','NE','E','SE','S','SW','W','NW'];this.bearingLabels=Array.from({length:360},(_,i)=>`${String(i).padStart(3,'0')}° · ${directions[Math.round(i/45)%8]}`);
-  // Typed OM lets the existing dial transform reuse one angle/transform object.
-  try{this.dialAngle=new CSSUnitValue(0,'deg');this.dialRotation=new CSSRotate(this.dialAngle);this.dialAngle=this.dialRotation.angle;this.dialTransform=new CSSTransformValue([this.dialRotation]);this.compassCard.attributeStyleMap.set('transform',this.dialTransform);this.compassCard.style.transition='transform .033333s linear';}catch{this.dialTransform=null;this.compassCard.style.transition='transform .05s linear';}
+  this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.chart=document.querySelector('#nav-chart');this.chart.width=800;this.chart.height=800;this.updateAssignment();
  }
  get blocking(){return !!this.panel||this.exercise.complete;}
@@ -32,15 +28,6 @@ export class NavigationView {
  updateAssignment(){
   const current=this.exercise.current;this.renderedStage=this.exercise.stage;this.drawMap();
   document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p><p>${current.description}</p><p class="muted">Equipment: map and compass always in hand.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
- }
- updateCompass(heading,dt){
-  const angle=-heading.angle*180/Math.PI;this.compassTick+=dt;
-  if(angle!==this.compassAngle&&this.compassTick>=(this.dialTransform?1/30:.05)){
-   if(this.dialTransform){this.dialAngle.value=angle;this.compassCard.attributeStyleMap.set('transform',this.dialTransform);}
-   else this.compassCard.style.transform=`rotate(${angle}deg)`;
-   this.compassAngle=angle;this.compassTick=0;
-  }
-  if(this.lastBearing!==heading.degrees){this.lastBearing=heading.degrees;this.bearing.textContent=this.bearingLabels[heading.degrees];}
  }
  update(player){
   if(this.renderedStage!==this.exercise.stage){this.updateAssignment();if(!this.exercise.complete){this.close();this.toggle('assignment');}}
