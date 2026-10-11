@@ -1,16 +1,15 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
+import {NavigationArms} from './navigation-arms.js?v=held-arms-1';
 // One static chart texture and a small shared-material rig; no lights or shadow passes.
 export class HeldNavigation {
  constructor(camera,chart){
   this.camera=camera;this.root=new THREE.Group();this.root.name='Held navigation equipment';camera.add(this.root);
   const paper=new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(chart),side:THREE.DoubleSide});paper.map.anisotropy=2;chart.addEventListener('chart-updated',()=>paper.map.needsUpdate=true);
-  const skin=new THREE.MeshLambertMaterial({color:0xae8965}),sleeve=new THREE.MeshLambertMaterial({color:0x354333}),rim=new THREE.MeshLambertMaterial({color:0x424940});
-  this.map=new THREE.Group();this.map.position.set(.12,-.59,-.64);this.map.rotation.set(-Math.PI/2+.12,0,-.08);this.root.add(this.map);
+  const rim=new THREE.MeshLambertMaterial({color:0x424940});
+  this.map=new THREE.Group();this.map.position.set(.06,-.82,-.68);this.map.rotation.set(-Math.PI/2+.12,0,-.08);this.root.add(this.map);
   const sheet=new THREE.Mesh(new THREE.PlaneGeometry(.68,.68),paper);this.map.add(sheet);
-  const arm=(x,y,z)=>{const group=new THREE.Group();group.position.set(x,y,z);group.rotation.x=-.35;const cuff=new THREE.Mesh(new THREE.BoxGeometry(.105,.12,.32),sleeve);cuff.position.z=.13;group.add(cuff);const hand=new THREE.Mesh(new THREE.BoxGeometry(.105,.055,.13),skin);hand.position.set(0,.025,-.055);group.add(hand);this.root.add(group);};
-  arm(.42,-.6,-.48);arm(-.34,-.47,-.48);
-  this.compass=new THREE.Group();this.compass.position.set(-.34,-.42,-.56);this.compass.rotation.x=-Math.PI/2+.12;this.root.add(this.compass);
+  this.compass=new THREE.Group();this.compass.position.set(-.34,-.72,-.64);this.compass.rotation.x=-Math.PI/2+.12;this.root.add(this.compass);
   // A fixed forward index is part of the existing bezel draw, not another mesh.
   const circle=new THREE.CircleGeometry(.105,24).toNonIndexed(),indexShape=new THREE.Shape();indexShape.moveTo(0,.095);indexShape.lineTo(-.012,.117);indexShape.lineTo(.012,.117);indexShape.closePath();
   const index=new THREE.ShapeGeometry(indexShape).toNonIndexed();index.translate(0,0,.004);
@@ -24,15 +23,21 @@ export class HeldNavigation {
   const shape=new THREE.Shape();shape.moveTo(0,.062);shape.lineTo(-.009,0);shape.lineTo(.009,0);shape.closePath();const geom=new THREE.ShapeGeometry(shape);
   this.needle=new THREE.Group();const north=new THREE.Mesh(geom,new THREE.MeshLambertMaterial({color:0xa3392b})),south=new THREE.Mesh(geom,new THREE.MeshLambertMaterial({color:0xeeeece}));south.rotation.z=Math.PI;this.needle.add(north,south);this.needle.position.z=.003;this.compass.add(this.needle);
   this.root.updateMatrixWorld(true);
-  for(const material of [skin,sleeve]){const parts=[],meshes=[];this.root.traverse(o=>{if(o.isMesh&&o.material===material){parts.push(o.geometry.clone().applyMatrix4(o.matrixWorld));meshes.push(o);}});for(const mesh of meshes)mesh.parent.remove(mesh);this.root.add(new THREE.Mesh(mergeGeometries(parts),material));for(const part of parts)part.dispose();}
   this.root.traverse(o=>{if(o.isMesh){o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=100;}});
   this.dial.renderOrder=101;this.needle.children.forEach(o=>o.renderOrder=102);
+  this.arms=new NavigationArms(this.root);this.ready=this.arms.ready;
   this.root.visible=false;
  }
- update(player,held){this.root.visible=held;if(!held)return;this.root.rotation.x=-player.pitch;// Read the actual held compass orientation, including camera sway/lean.
-  // Project fixed world north into its dial plane; never integrate turn deltas.
-  // The camera lives directly in the unrotated world scene. Compose only
-  // these three rotations instead of updating/decomposing parent matrices.
+ update(player,held,dt=0,feel=null,active=held){
+  this.root.visible=active;this.map.visible=this.compass.visible=held;if(!active)return;
+  // Equipment stays low in the world; looking down brings it into view.
+  this.root.rotation.x=-player.pitch;
+  this.arms.update(dt,player,held,feel);
+  if(!held)return;
+  // Keep the chart edge and compass seated in the animated gun-arm grips.
+  this.map.position.set(this.arms.right.x-.34,this.arms.right.y-.04,this.arms.right.z-.11);
+  this.compass.position.set(this.arms.left.x,this.arms.left.y+.03,this.arms.left.z-.06);
+  // Project fixed world north into the held dial plane, including look and lean.
   this.compassOrientation.copy(this.camera.quaternion).multiply(this.root.quaternion).multiply(this.compass.quaternion);
   this.magneticNorth.set(0,0,-1).applyQuaternion(this.compassOrientation.invert());
   const northAngle=Math.atan2(-this.magneticNorth.x,this.magneticNorth.y);
