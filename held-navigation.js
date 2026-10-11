@@ -1,7 +1,7 @@
 import {CompassHeading} from './compass-heading.js?v=1';
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {NavigationArms} from './navigation-arms.js?v=held-arms-1';
+import {NavigationArms} from './navigation-arms.js?v=always-held-1';
 // One static chart texture and a small shared-material rig; no lights or shadow passes.
 export class HeldNavigation {
  constructor(camera,chart){
@@ -29,13 +29,12 @@ export class HeldNavigation {
   this.arms=new NavigationArms(this.root);this.ready=this.arms.ready;
   this.root.visible=false;
  }
- update(player,held,dt=0,feel=null,active=held){
+ update(player,dt=0,feel=null,active=true){
   this.heading.update(this.camera);
-  this.root.visible=active;this.map.visible=this.compass.visible=held;if(!active)return;
+  this.root.visible=active;if(!active)return;
   // Equipment stays low in the world; looking down brings it into view.
   this.root.rotation.x=-player.pitch;
-  this.arms.update(dt,player,held,feel);
-  if(!held)return;
+  this.arms.update(dt,player,feel);
   // Keep the chart edge and compass seated in the animated gun-arm grips.
   this.map.position.set(this.arms.right.x-.34,this.arms.right.y-.04,this.arms.right.z-.11);
   this.compass.position.set(this.arms.left.x,this.arms.left.y+.03,this.arms.left.z-.06);

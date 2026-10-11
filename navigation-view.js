@@ -17,7 +17,7 @@ export function addCheckpointPosts(scene,points){
 }
 export class NavigationView {
  constructor(exercise){
-  this.exercise=exercise;this.panel=null;this.compassOpen=false;this.equipmentHeld=false;this.renderedStage=-1;
+  this.exercise=exercise;this.panel=null;this.renderedStage=-1;
   this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.compass=document.querySelector('#compass');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.compassCard=document.querySelector('#compass-card');this.bearing=document.querySelector('#bearing');this.compass.hidden=false;this.compassAngle=Infinity;this.compassTick=0;this.lastBearing=-1;
   const directions=['N','NE','E','SE','S','SW','W','NW'];this.bearingLabels=Array.from({length:360},(_,i)=>`${String(i).padStart(3,'0')}° · ${directions[Math.round(i/45)%8]}`);
@@ -27,11 +27,11 @@ export class NavigationView {
  }
  get blocking(){return !!this.panel||this.exercise.complete;}
  close(){this.panel=null;this.map.hidden=true;this.journal.hidden=true;}
- toggle(panel){if(panel==='map'||panel==='compass'){this.equipmentHeld=!this.equipmentHeld;this.compassOpen=this.equipmentHeld;this.close();return;}const next=this.panel===panel?null:panel;this.close();this.panel=next;if(next==='map')this.map.hidden=false;if(next==='assignment')this.journal.hidden=false;}
- reset(){this.equipmentHeld=false;this.compassOpen=false;this.close();this.summary.hidden=true;this.renderedStage=-1;this.updateAssignment();}
+ toggle(panel){if(panel==='map'||panel==='compass'){this.close();return;}const next=this.panel===panel?null:panel;this.close();this.panel=next;if(next==='map')this.map.hidden=false;if(next==='assignment')this.journal.hidden=false;}
+ reset(){this.close();this.summary.hidden=true;this.renderedStage=-1;this.updateAssignment();}
  updateAssignment(){
   const current=this.exercise.current;this.renderedStage=this.exercise.stage;this.drawMap();
-  document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p><p>${current.description}</p><p class="muted">Equipment: map and compass.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
+  document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p><p>${current.description}</p><p class="muted">Equipment: map and compass always in hand.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
  }
  updateCompass(heading,dt){
   const angle=-heading.angle*180/Math.PI;this.compassTick+=dt;

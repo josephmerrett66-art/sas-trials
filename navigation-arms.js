@@ -32,21 +32,20 @@ export class NavigationArms {
   this.left.setFromMatrixPosition(this.leftHand.matrixWorld).applyMatrix4(this.inverse);
   this.right.setFromMatrixPosition(this.rightHand.matrixWorld).applyMatrix4(this.inverse);
  }
- update(dt,player,held,feel){
+ update(dt,player,feel){
   if(!this.model)return;
   const speed=Math.hypot(player.vx??0,player.vz??0),moving=player.grounded&&speed>.2&&!(player.slide>0);
   const action=this.actions[moving?(player.state==='SPRINTING'?'Run':'Walk'):'Idle'];
   if(action!==this.current){action.reset().play();this.current.crossFadeTo(action,.16,false);this.current=action;}
   this.current.setEffectiveTimeScale(moving?Math.min(1.35,speed/(player.state==='SPRINTING'?player.config.sprint:player.config.walk)):1);
   this.mixer.update(dt);
-  const blend=1-Math.exp(-12*dt);this.lower+=((held&&moving?(player.state==='SPRINTING'?.16:.08):0)-this.lower)*blend;
+  const blend=1-Math.exp(-12*dt);this.lower+=((moving?(player.state==='SPRINTING'?.16:.08):0)-this.lower)*blend;
   this.leftShoulder.position.copy(this.leftBase);this.rightShoulder.position.copy(this.rightBase);
-  if(held){
-   // FBX local X points left, Z points up, and Y points toward the camera.
-   this.leftShoulder.position.x+=.406;this.leftShoulder.position.z-=.254;this.leftShoulder.position.y-=.218;
-   this.rightShoulder.position.x-=.272;this.rightShoulder.position.z-=.346;this.rightShoulder.position.y-=.236;
-  }else{this.leftShoulder.position.x+=.24;this.rightShoulder.position.x-=.12;}
-  this.model.position.y=(held?-.52:-.30)-this.lower+(feel?.dip??0)*.25;this.model.position.z=held?-.15:-.25;
-  this.root.updateWorldMatrix(true,true);this.readHands();
+  // FBX local X points left, Z points up, and Y points toward the camera.
+  this.leftShoulder.position.x+=.406;this.leftShoulder.position.z-=.254;this.leftShoulder.position.y-=.218;
+  this.rightShoulder.position.x-=.272;this.rightShoulder.position.z-=.346;this.rightShoulder.position.y-=.236;
+  this.model.position.y=-.52-this.lower+(feel?.dip??0)*.25;this.model.position.z=-.15;
+  // Update only the arm hierarchy for hand positions; the scene updates equipment later.
+  this.model.updateWorldMatrix(true,true);this.readHands();
  }
 }
