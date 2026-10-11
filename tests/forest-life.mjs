@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import * as THREE from '../vendor/three.module.js';
+import {ForestLife} from '../forest-life.js';
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();camera.position.set(-130,6,30);camera.rotation.y=.4;
+const life=new ForestLife(scene),weather={rain:0,gust:0};
+assert.equal(scene.children.length,1);assert.equal(life.mesh.geometry.attributes.position.count,132);assert(!life.mesh.castShadow&&!life.mesh.receiveShadow);assert(life.mesh.material.forceSinglePass,'Double-sided details use one draw');
+const position=life.positions,alpha=life.alpha,records=life.records;
+for(let i=0;i<100;i++)life.step(.05,true,camera,weather,false);
+assert(life.mesh.visible);assert(life.records.filter(r=>r.duration>0).length>=3);
+const anchored=life.records[0];const originalX=anchored.x,originalZ=anchored.z;camera.position.x+=2;life.step(.05,true,camera,weather,false);assert.equal(anchored.x,originalX);assert.equal(anchored.z,originalZ,'Encounter stays in the world when camera moves');
+const normal=life.normals.subarray(life.records[0].start*3,life.records[0].start*3+3);assert(Math.hypot(...normal)>.99,'Wings have valid lighting normals');
+const saved=position.slice(),time=life.time;life.step(.05,false,camera,weather,false);assert.equal(life.time,time);assert.deepEqual(position,saved,'Pause freezes flight');
+life.step(.05,true,camera,weather,true);assert(!life.mesh.visible);assert(alpha.every(a=>a===0),'No bright insects/leaves at night');
+weather.rain=1;life.step(.05,true,camera,weather,false);for(const r of records.filter(r=>r.butterfly))assert(alpha.subarray(r.start,r.start+r.count).every(a=>a===0),'Butterflies disappear in heavy rain');
+weather.rain=0;weather.gust=1;
+for(let i=0;i<8000;i++){if(i%400===0){camera.position.x+=7;camera.position.z-=3;}life.step(.05,true,camera,weather,false);assert(position.every(Number.isFinite));assert(life.normals.every(Number.isFinite));assert(alpha.every(a=>a>=0&&a<=1));}
+assert.equal(life.positions,position);assert.equal(life.alpha,alpha);assert.equal(life.records,records);assert.equal(records.length,12);assert.equal(scene.children.length,1,'Pool never grows across respawns');
+assert(records.some(r=>!r.butterfly&&r.duration>0),'Leaves encounter the player too');
+const shader={vertexShader:'#include <begin_vertex>',fragmentShader:'#include <color_fragment>'};life.mesh.material.onBeforeCompile(shader);assert(shader.fragmentShader.includes('vLifeAlpha'));assert(shader.vertexShader.includes('lifeAlpha'));
+console.log('Passed bounded forest life, world-anchored encounters, pause, rain/night suppression, finite long-run geometry and reused buffers.');
