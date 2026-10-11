@@ -7,7 +7,7 @@ import {FIRST_CONTROL,firstControlClearing,isControlBoulder} from './first-contr
 import {trailClearance,trailCenter,trails} from './landmark-routes.js?v=no-river-1';
 import {tileTerrain} from './terrain-tiles.js';
 import * as THREE from './vendor/three.module.js';
-import {createGroundMaterial} from './ground-material.js?v=no-river-1';
+import {createGroundMaterial} from './ground-material.js?v=gravel-1';
 import {createSurfaceMaterial} from './surface-material.js?v=performance-15';
 
 import {terrainHeight,WORLD_SIZE,TERRAIN_SEGMENTS} from './terrain.js?v=gullies-1';
@@ -31,18 +31,18 @@ export function createForest(scene){
   groundGeometry.computeVertexNormals();
   scene.add(tileTerrain(groundGeometry,createGroundMaterial(),'Faceted forest floor'));
   // Copy terrain triangles exactly so the dirt never clips into rolling hills.
-  const trailPositions=[],trailColors=[],trailEdges=[],indices=groundGeometry.index.array;
+  const trailPositions=[],trailNormals=[],trailEdges=[],normals=groundGeometry.attributes.normal,indices=groundGeometry.index.array;
   const trailField=new Float32Array(positions.count);for(let i=0;i<positions.count;i++)trailField[i]=trailClearance(positions.getX(i),positions.getZ(i));
   for(let i=0;i<indices.length;i+=3){
    const ids=[indices[i],indices[i+1],indices[i+2]];if(!ids.some(id=>trailField[id]<6))continue;
-   const color=new THREE.Color(0x9e784b).lerp(new THREE.Color(0xc49b60),random());
-   const vertex=(u,v)=>{const w=1-u-v,x=w*positions.getX(ids[0])+u*positions.getX(ids[1])+v*positions.getX(ids[2]),z=w*positions.getZ(ids[0])+u*positions.getZ(ids[1])+v*positions.getZ(ids[2]);return [x,w*positions.getY(ids[0])+u*positions.getY(ids[1])+v*positions.getY(ids[2])+.02,z,trailClearance(x,z)];};
-   const add=(a,b,c)=>{if(Math.min(a[3],b[3],c[3])>.4)return;for(const p of [a,b,c]){trailPositions.push(p[0],p[1],p[2]);trailColors.push(color.r,color.g,color.b);trailEdges.push(p[3]);}};
+   random(); // Preserve the existing forest placement seed sequence.
+   const vertex=(u,v)=>{const w=1-u-v,x=w*positions.getX(ids[0])+u*positions.getX(ids[1])+v*positions.getX(ids[2]),z=w*positions.getZ(ids[0])+u*positions.getZ(ids[1])+v*positions.getZ(ids[2]);return [x,w*positions.getY(ids[0])+u*positions.getY(ids[1])+v*positions.getY(ids[2])+.02,z,trailClearance(x,z),w*normals.getX(ids[0])+u*normals.getX(ids[1])+v*normals.getX(ids[2]),w*normals.getY(ids[0])+u*normals.getY(ids[1])+v*normals.getY(ids[2]),w*normals.getZ(ids[0])+u*normals.getZ(ids[1])+v*normals.getZ(ids[2])];};
+   const add=(a,b,c)=>{if(Math.min(a[3],b[3],c[3])>.4)return;for(const p of [a,b,c]){trailPositions.push(p[0],p[1],p[2]);trailNormals.push(p[4],p[5],p[6]);trailEdges.push(p[3]);}};
    // Local subdivision only along tracks, retaining the exact parent terrain plane.
    // Unsigned distance prevents false dirt wedges between nearby branches.
    for(let u=0;u<3;u++)for(let v=0;v<3-u;v++){const a=vertex(u/3,v/3),b=vertex((u+1)/3,v/3),c=vertex(u/3,(v+1)/3);add(a,b,c);if(u+v<2)add(b,vertex((u+1)/3,(v+1)/3),c);}
   }
-  const pathGeometry=new THREE.BufferGeometry();pathGeometry.setAttribute('position',new THREE.Float32BufferAttribute(trailPositions,3));pathGeometry.setAttribute('color',new THREE.Float32BufferAttribute(trailColors,3));pathGeometry.setAttribute('trailEdge',new THREE.Float32BufferAttribute(trailEdges,1));pathGeometry.computeVertexNormals();scene.add(tileTerrain(pathGeometry,createGroundMaterial(true),'Winding dirt trail'));groundGeometry.dispose();pathGeometry.dispose();
+  const pathGeometry=new THREE.BufferGeometry();pathGeometry.setAttribute('position',new THREE.Float32BufferAttribute(trailPositions,3));pathGeometry.setAttribute('normal',new THREE.Float32BufferAttribute(trailNormals,3));pathGeometry.setAttribute('trailEdge',new THREE.Float32BufferAttribute(trailEdges,1));scene.add(tileTerrain(pathGeometry,createGroundMaterial(true),'Winding dirt trail'));groundGeometry.dispose();pathGeometry.dispose();
   const trees=[];
   for(let i=0;i<Math.round(4700*areaScale);i++){const x=(random()-.5)*span,z=(random()-.5)*span;if(!outsideTrail(x,z))continue;trees.push({x,z,height:9+random()*14,width:1.65+random()*2.25,rotation:random()*Math.PI*2,trunk:.7+random()*.65});}
   for(const [x,z] of [[-6,-2],[7,-4],[-6,-17],[6,1],[-7,13]])trees.push({x,z,height:22,width:3.5,rotation:random()*6,trunk:1.3});
