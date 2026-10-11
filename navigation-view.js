@@ -1,13 +1,13 @@
 import {trails} from './landmark-routes.js?v=no-river-1';
 import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=gullies-1';
-import {START,gridReference,coordinates} from './navigation.js?v=no-river-1';
+import {START,gridReference,coordinates} from './navigation.js?v=first-control-1';
 
 export function addCheckpointPosts(scene,points){
  const groups=[];
  const timber=new THREE.MeshLambertMaterial({color:0x776046}),postGeometry=new THREE.BoxGeometry(.18,1.3,.18),boardGeometry=new THREE.BoxGeometry(.65,.5,.12);
  for(const point of points){
-  const group=new THREE.Group();group.position.set(point.x,point.y,point.z);group.name=`Checkpoint ${point.code}`;
+  const group=new THREE.Group();group.position.set(point.x,point.y,point.z);group.name=`Checkpoint ${point.code}`;if(point.feature)group.rotation.y=Math.PI/2;
   const post=new THREE.Mesh(postGeometry,timber);post.position.y=.65;group.add(post);
   const board=new THREE.Mesh(boardGeometry,timber);board.position.y=1.5;group.add(board);
   const label=document.createElement('canvas');label.width=128;label.height=96;const ctx=label.getContext('2d');ctx.fillStyle='#d3be8b';ctx.fillRect(0,0,128,96);ctx.fillStyle='#29281f';ctx.textAlign='center';ctx.font='bold 62px monospace';ctx.fillText(point.code,64,69);
@@ -27,7 +27,7 @@ export class NavigationView {
  reset(){this.close();this.summary.hidden=true;this.renderedStage=-1;this.updateAssignment();}
  updateAssignment(){
   const current=this.exercise.current;this.renderedStage=this.exercise.stage;this.drawMap();
-  document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p><p>${current.description}</p><p class="muted">Equipment: map and compass always in hand.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
+  document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p>${current.controlDescription?`<p><strong>Control: ${current.controlDescription}</strong></p>`:''}<p>${current.description}</p><p class="muted">Equipment: map and compass always in hand.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
  }
  update(player){
   if(this.renderedStage!==this.exercise.stage){this.updateAssignment();if(!this.exercise.complete){this.close();this.toggle('assignment');}}
