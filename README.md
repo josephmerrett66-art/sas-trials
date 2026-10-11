@@ -1,3 +1,17 @@
+# Bergen packing and field condition
+
+Every attempt now starts at a kit list. BEGIN EXERCISE opens **Pack your bergen**: a fixed 6 kg base (bergen, clothing, map, compass, torch) plus water bottles (1.15 kg full, up to 6), ration packs (0.6 kg, up to 6), a water filter, a waterproof jacket and a stove. The total weight sets walking pace: full pace up to 8 kg, then about 3% slower per kilogram, never below 60%. Weight falls as water is drunk and rations eaten. STEP OFF locks the loadout until the exercise is reset.
+
+- Hydration and energy drain with effort (standing, walking, sprinting), climbing and load. Rain raises energy loss by up to 50% unless the jacket is packed. Below 30% either need slows you further; at zero for 60 s you are medically withdrawn and must repack.
+- V / Xbox D-pad down: drink 0.5 L. B / Xbox D-pad up: eat a ration (more energy with the stove).
+- Springs: small pools in natural hollows, ringed with mossy stones and reeds, with a blue-banded timber stake. They are found once from the terrain (clear of trees, tracks, posts and the start, at least 260 m apart) and marked as blue dots on the chart. G / Xbox X beside one fills every bottle. Without the filter that water is untreated: each drink has a 40% chance of making you unwell, doubling thirst for three minutes. With no bottles you can still drink at the spring.
+- No new screen overlays during play. Kit and condition are pencilled along the bottom margin of the held chart (words, not gauges, so the chart texture only updates on changes); a soft dark vignette grows as either need runs low. The pause menu shows the full condition report.
+- `kit.js` holds the rules (pure, node-testable), `springs.js` placement and models, `packing-view.js` the kit list and condition UI. `?navtest=1` adds spring teleport buttons and exposes `window.navtest` for browser checks.
+
+Checks: tests/kit.mjs covers weight and pace, the packing lock, effort/load/climb/rain drain, drinking, eating, the stove, refills, untreated illness, withdrawal, controller pace, spring placement rules and spring culling. All existing tests pass. Browser-verified the packing screen, drinking, eating, refilling at a spring, chart notes and withdrawal. Preview: artifacts/kit-packing.png.
+
+Performance: all springs share two draws (banks/stones/reeds/stakes on the existing landmark material, plus one water material), about 3,200 triangles in total, no lights, shadows or transparency, and both draws are skipped unless a spring is inside fog distance, like the checkpoint posts. Kit logic is a handful of arithmetic per frame with no allocations. The `?benchmark=1&weapon=1` stress test could not be measured in the cloud environment (software rendering at about 3 FPS returned zero valid samples on both the old and new builds), so frame times on the development Mac are still to be confirmed.
+
 # Current prototype: Wilderness navigation
 
 Run `python3 -m http.server 8080` in this folder and open http://localhost:8080/.

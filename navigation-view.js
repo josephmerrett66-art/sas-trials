@@ -16,8 +16,8 @@ export function addCheckpointPosts(scene,points){
  return groups;
 }
 export class NavigationView {
- constructor(exercise){
-  this.exercise=exercise;this.panel=null;this.renderedStage=-1;
+ constructor(exercise,{springs=[],kit=null}={}){
+  this.exercise=exercise;this.springs=springs;this.kit=kit;this.renderedNotes=null;this.panel=null;this.renderedStage=-1;
   this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.chart=document.querySelector('#nav-chart');this.chart.width=800;this.chart.height=800;this.updateAssignment();
  }
@@ -29,6 +29,7 @@ export class NavigationView {
   const current=this.exercise.current;this.renderedStage=this.exercise.stage;this.drawMap();
   document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p>${current.controlDescription?`<p><strong>Control: ${current.controlDescription}</strong></p>`:''}<p>${current.description}</p><p class="muted">Equipment: map and compass always in hand.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
  }
+ refreshNotes(){if((this.kit?.packed?this.kit.notes:null)!==this.renderedNotes)this.drawMap();}
  update(player){
   if(this.renderedStage!==this.exercise.stage){this.updateAssignment();if(!this.exercise.complete){this.close();this.toggle('assignment');}}
   const near=this.exercise.nearby(player);this.prompt.textContent=near&&!this.exercise.complete?(this.exercise.checkpoints.indexOf(near)<this.exercise.stage?`Post ${near.code} · Reached`:`Post ${near.code} · G / Xbox X to register`):'';
@@ -42,6 +43,7 @@ export class NavigationView {
   const colors=['#d5dfc7','#c7d3b6','#b5c5a1','#a4b48b','#91a278','#809367','#71845c','#60734e'];
   for(let y=0;y<span;y+=step)for(let x=0;x<span;x+=step){const wx=x/span*WORLD_SIZE-half,wz=y/span*WORLD_SIZE-half,h=terrainHeight(wx,wz),band=Math.floor((h+25)/7);ctx.fillStyle=colors[Math.max(0,Math.min(colors.length-1,band))];ctx.fillRect(margin+x,margin+y,step,step);const hx=terrainHeight(wx+step/span*WORLD_SIZE,wz),hz=terrainHeight(wx,wz+step/span*WORLD_SIZE);if(Math.floor(h/7)!==Math.floor(hx/7)||Math.floor(h/7)!==Math.floor(hz/7)){ctx.fillStyle='#4b654650';ctx.fillRect(margin+x,margin+y,2,2);}}
   for(const route of trails){ctx.beginPath();for(let z=route.start;z<=route.end;z+=2){z===route.start?ctx.moveTo(px(route.center(z)),pz(z)):ctx.lineTo(px(route.center(z)),pz(z));}ctx.strokeStyle='#7c5c3f';ctx.lineWidth=2.5;ctx.stroke();}
+  for(const spring of this.springs){ctx.beginPath();ctx.arc(px(spring.x),pz(spring.z),8,0,Math.PI*2);ctx.fillStyle='#3d6f8e';ctx.fill();ctx.strokeStyle='#e5d9b8';ctx.lineWidth=1.5;ctx.stroke();}
   ctx.strokeStyle='#3c483d66';ctx.lineWidth=1;ctx.fillStyle='#303b31';ctx.font='bold 23px monospace';ctx.textAlign='center';
   for(let i=0;i<=8;i++){const t=margin+i*span/8;ctx.beginPath();ctx.moveTo(t,margin);ctx.lineTo(t,margin+span);ctx.moveTo(margin,t);ctx.lineTo(margin+span,t);ctx.stroke();if(i<8){ctx.fillText(String.fromCharCode(65+i),t+span/16,32);ctx.fillText(String(i+1),26,t+span/16+5);}}
   this.baseChart=document.createElement('canvas');this.baseChart.width=800;this.baseChart.height=800;this.baseChart.getContext('2d').drawImage(this.chart,0,0);
@@ -49,8 +51,10 @@ export class NavigationView {
   ctx.textAlign='center';ctx.font='bold 24px monospace';
   const mark=(p,text,color)=>{ctx.strokeStyle=color;ctx.fillStyle='#f5ecd6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(px(p.x),pz(p.z),10,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.fillText(text,px(p.x)+22,pz(p.z)-14);};
   mark(START,'START','#303b31');for(const p of this.exercise.revealed)mark(p,p.code,p===this.exercise.current?'#8e3e2d':'#52614d');
-  ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m`,48,781);
+  ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m · Blue: spring`,48,772);
+  // Kit and condition, pencilled along the bottom margin.
+  this.renderedNotes=this.kit?.packed?this.kit.notes:null;if(this.renderedNotes){ctx.font='bold 14px monospace';ctx.fillStyle='#4a3c2a';ctx.fillText(this.renderedNotes,48,794);}
   this.chart.dispatchEvent(new Event('chart-updated'));
-  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
+  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Blue dots: springs · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
  }
 }

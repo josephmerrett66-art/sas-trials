@@ -1,6 +1,6 @@
 export const defaults = {walk:6,sprint:9.5,acceleration:45,braking:42,directionGrip:12,airControl:8,jump:1.2,sensitivity:0.002,fov:65,stickSensitivity:5,stickCurve:1.6,adsSensitivity:.55,deadzone:.08,juice:1.5,armMotion:1,size:1.35,footstepVolume:.35};
 export class Controller {
-  constructor(groundHeight=null,boundary=Infinity){this.groundHeight=groundHeight;this.boundary=boundary;this.config={...defaults};this.reset();}
+  constructor(groundHeight=null,boundary=Infinity){this.groundHeight=groundHeight;this.boundary=boundary;this.config={...defaults};this.pace=1;this.reset();}
   reset(){this.x=0;this.z=8;this.y=0;this.vx=0;this.vz=0;this.vy=0;this.yaw=0;this.pitch=0;this.grounded=true;this.slide=0;this.eye=1.7*this.config.size;this.travel=0;this.jumpBuffer=0;this.time=0;this.lastGround=0;this.wasCrouch=false;this.state='GROUNDED';}
   get radius(){return .3*this.config.size;}
   setSize(size){const next=Math.min(2.2,Math.max(.7,size));this.eye*=next/this.config.size;this.config.size=next;}
@@ -15,7 +15,8 @@ export class Controller {
     if(analog){side+=analog.x;forward-=analog.y;}
     const length=Math.min(1,Math.hypot(side,forward)), rawLength=Math.hypot(side,forward);if(rawLength){side/=rawLength;forward/=rawLength;}
     const wx=side*Math.cos(this.yaw)-forward*Math.sin(this.yaw),wz=-side*Math.sin(this.yaw)-forward*Math.cos(this.yaw);
-    const max=crouch?3:(sprint&&forward>0?this.config.sprint:this.config.walk);
+    // pace: bergen weight and field condition, 1 when unladen and fit.
+    const max=(crouch?3:(sprint&&forward>0?this.config.sprint:this.config.walk))*this.pace;
     if(this.slide>0&&this.grounded){const decay=Math.exp(-1.4*dt);this.vx*=decay;this.vz*=decay;}
     else if(this.grounded){
       const tx=wx*max*length,tz=wz*max*length;
