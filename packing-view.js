@@ -1,21 +1,26 @@
-import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=backpack-1';
+import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=bergen-1';
+import {BergenView} from './bergen-view.js?v=1';
+import {SHAPES} from './bergen-grid.js?v=1';
 
 // Kit list before the exercise, condition notes on the pause menu, and the strain vignette.
 export class PackingView {
  constructor(kit,{onStepOff,clock=null}){
   this.kit=kit;this.clock=clock;this.menu=document.querySelector('#menu');this.panel=document.querySelector('#packing');this.condition=document.querySelector('#condition');this.vignette=document.querySelector('#strain');this.lastStrain=-1;
+  // The kit list is a tray beside the bergen: drag (or tap) an item into a space where it fits.
   const list=this.panel.querySelector('#kit-list');
-  list.innerHTML=`<li class="fixed"><span><strong>Bergen, clothing, map, compass, torch</strong><small>Always carried.</small></span><span class="kg">${BASE_WEIGHT.toFixed(1)} kg</span><span class="count">1</span></li>`+ITEMS.map(item=>`<li data-item="${item.id}"><span><strong>${item.name}</strong><small>${item.note}</small></span><span class="kg">${item.weight.toFixed(item.weight<1?2:1)} kg</span><span class="count"><button type="button" data-step="-1" aria-label="Fewer ${item.name}">−</button><output></output><button type="button" data-step="1" aria-label="More ${item.name}">+</button></span></li>`).join('');
-  for(const button of list.querySelectorAll('[data-step]'))button.onclick=()=>{const id=button.closest('li').dataset.item;kit.set(id,kit.loadout[id]+Number(button.dataset.step));this.render();};
+  list.innerHTML=`<li class="fixed"><span><strong>Bergen, clothing, map, compass, torch</strong><small>Always carried.</small></span><span class="kg">${BASE_WEIGHT.toFixed(1)} kg</span></li>`+ITEMS.map(item=>`<li data-item="${item.id}"><button type="button" class="tray-item" data-add="${item.id}" aria-label="Pack ${item.name}"><i class="shape" style="--w:${SHAPES[item.id][0]};--h:${SHAPES[item.id][1]}" data-kind="${item.id}"></i><span><strong>${item.name}</strong><small>${item.note}</small></span></button><span class="kg">${item.weight.toFixed(item.weight<1?2:1)} kg</span><span class="count"><output></output><button type="button" data-remove aria-label="Unpack one ${item.name}">−</button></span></li>`).join('');
+  for(const button of list.querySelectorAll('[data-remove]'))button.onclick=()=>{const id=button.closest('li').dataset.item;kit.set(id,kit.loadout[id]-1);this.bergen.render();this.render();};
+  this.bergen=new BergenView(this.panel.querySelector('#bergen-space'),kit.bergen,{tray:list,cell:matchMedia('(max-width:600px)').matches?36:42,canAdd:id=>kit.loadout[id]<ITEMS.find(i=>i.id===id).max,onChange:()=>this.render()});
   this.panel.querySelector('#step-off').onclick=()=>{this.hide();onStepOff();};
   this.panel.querySelector('#kit-back').onclick=()=>this.hide();
   this.render();
  }
  get open(){return !this.panel.hidden;}
- show(){this.menu.hidden=true;this.panel.hidden=false;this.render();}
- hide(){this.panel.hidden=true;this.menu.hidden=false;}
+ show(){this.menu.hidden=true;this.panel.hidden=false;this.bergen.render();this.render();}
+ hide(){this.bergen.cancel();this.panel.hidden=true;this.menu.hidden=false;}
  render(){
-  for(const li of this.panel.querySelectorAll('[data-item]')){const id=li.dataset.item,item=ITEMS.find(i=>i.id===id),n=this.kit.loadout[id];li.querySelector('output').value=item.max===1?(n?'Packed':'Left'):n;li.classList.toggle('left',!n);li.querySelector('[data-step="-1"]').disabled=n<=0;li.querySelector('[data-step="1"]').disabled=n>=item.max;}
+  for(const li of this.panel.querySelectorAll('[data-item]')){const id=li.dataset.item,item=ITEMS.find(i=>i.id===id),n=this.kit.loadout[id];li.querySelector('output').value=item.max===1?(n?'Packed':'—'):`${n} / ${item.max}`;li.classList.toggle('left',!n);li.querySelector('[data-remove]').disabled=n<=0;li.querySelector('[data-add]').disabled=n>=item.max;}
+  const free=this.kit.bergen.freeCells;this.panel.querySelector('#bergen-free').textContent=`${free} of ${this.kit.bergen.cols*this.kit.bergen.rows} spaces free${free<6?' · tight for wood and game':''}`;
   const weight=packWeight(this.kit.loadout),pace=loadPace(weight);
   this.panel.querySelector('#kit-weight').textContent=`${weight.toFixed(1)} kg`;
   this.panel.querySelector('#kit-pace').textContent=`${Math.round(pace*100)}% walking pace`;

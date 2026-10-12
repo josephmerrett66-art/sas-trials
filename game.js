@@ -22,10 +22,10 @@ import {ForestTorch,installTorchOptics} from './torch.js?v=daycycle-1';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=big-1';
 import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=big-1';
 import {HeldNavigation} from './held-navigation.js?v=baseplate-1';
-import {FieldKit} from './kit.js?v=backpack-1';
+import {FieldKit} from './kit.js?v=bergen-1';
 import {findSprings,addSprings,nearbySpring,updateSpringVisibility} from './springs.js?v=big-1';
-import {PackingView} from './packing-view.js?v=backpack-1';
-import {InventoryView} from './inventory-view.js?v=backpack-1';
+import {PackingView} from './packing-view.js?v=bergen-1';
+import {InventoryView} from './inventory-view.js?v=bergen-1';
 import {DayClock,formatClock} from './daycycle.js?v=1';
 import {Camp} from './camp.js?v=big-1';
 import {Wildlife} from './wildlife.js?v=big-1';
@@ -119,10 +119,10 @@ function fire(){
 }
 // Single actions, shared by the keys and the backpack.
 function registerPost(){if(exercise.complete||!exercise.nearby(player))return false;if(exercise.interact(player))view.update(player);return true;}
-function liftSnare(){const snare=camp.nearSnare(player);if(!snare||!kit.packed)return;kit.recoverSnare(camp.checkSnare(snare,clock.hours));say(kit.message);view.drawMap();}
+function liftSnare(){const snare=camp.nearSnare(player);if(!snare||!kit.packed)return;if(!kit.roomFor(clock.hours>=snare.catchAt?['snares','raw']:['snares'])){say('No room in your bergen. Rearrange it (Tab) or eat or burn something first.');return;}kit.recoverSnare(camp.checkSnare(snare,clock.hours));say(kit.message);view.drawMap();}
 function stokeFire(){if(!kit.packed||!camp.lit||!camp.near(player))return;camp.fire.fuel=kit.stokeFire(camp.fire.fuel);say(kit.message);}
 function fill(){if(!kit.packed)return;if(!nearWater()){say('No water within reach. Find a spring, stream or river.');return;}kit.refill();say(kit.message);}
-function throwStick(){const rabbit=rabbitInSight();if(!rabbit||!kit.packed)return;if(wildlife.throwAt(rabbit,player))kit.catchRabbit();else kit.message='Missed. It bolts for cover.';say(kit.message);}
+function throwStick(){const rabbit=rabbitInSight();if(!rabbit||!kit.packed)return;if(!kit.roomFor(['raw'])){say('No room in your bergen for a rabbit. Rearrange it (Tab) first.');return;}if(wildlife.throwAt(rabbit,player))kit.catchRabbit();else kit.message='Missed. It bolts for cover.';say(kit.message);}
 function gatherWood(){const tree=nearTree();if(!tree||!kit.packed){say('No dead wood within reach. Stand beside a big tree.');return;}if(kit.gatherWood())gathered.add(tree);say(kit.message);}
 function cookFood(){if(!kit.packed)return;if(!(camp.lit&&camp.near(player))){say('Cook beside a lit fire.');return;}kit.cook();say(kit.message);}
 function lightFire(){
@@ -154,7 +154,7 @@ function tool(name){feel.unlockAudio();if(name==='interact')interact();else view
 for(const button of document.querySelectorAll('[data-tool]'))button.onclick=()=>tool(button.dataset.tool);
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>view.close();
 for(const button of document.querySelectorAll('[data-restart]'))button.onclick=resetRun;
-document.addEventListener('keydown',e=>{if(inventory?.open&&active){if(e.code==='Escape'){pause();return;}if(['Tab','KeyI'].includes(e.code)){e.preventDefault();inventory.close();return;}if(['ArrowDown','ArrowRight','KeyS','KeyD'].includes(e.code)){e.preventDefault();inventory.move(1);}else if(['ArrowUp','ArrowLeft','KeyW','KeyA'].includes(e.code)){e.preventDefault();inventory.move(-1);}return;}if(e.code==='Tab'&&active){e.preventDefault();if(!e.repeat)openBag();return;}if(e.code==='Escape'){pause();return;}if(e.code==='KeyR'&&!active&&!e.repeat){resetRun();return;}if(!active||e.target.matches('input'))return;keys.add(e.code);if(['Space','KeyM','KeyK','KeyJ'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='KeyM')tool('map');if(e.code==='KeyK')tool('compass');if(e.code==='KeyJ')tool('assignment');if(e.code==='KeyG')interact();if(e.code==='KeyV')drink();if(e.code==='KeyB')eat();if(e.code==='KeyF')fire();if(e.code==='KeyZ')sleep();if(e.code==='KeyN')snare();if(e.code==='KeyI')openBag();if(e.code==='KeyL'){torch.toggle();syncTorch();}if(e.code==='Space'&&!view.blocking)player.jumpBuffer=player.time+.12;});
+document.addEventListener('keydown',e=>{if(inventory?.open&&active){if(e.code==='Escape'){pause();return;}if(['Tab','KeyI'].includes(e.code)){e.preventDefault();inventory.close();return;}if(e.target.closest?.('.bergen'))return;if(['ArrowDown','ArrowRight','KeyS','KeyD'].includes(e.code)){e.preventDefault();inventory.move(1);}else if(['ArrowUp','ArrowLeft','KeyW','KeyA'].includes(e.code)){e.preventDefault();inventory.move(-1);}return;}if(e.code==='Tab'&&active){e.preventDefault();if(!e.repeat)openBag();return;}if(e.code==='Escape'){pause();return;}if(e.code==='KeyR'&&!active&&!e.repeat&&!packing?.open){resetRun();return;}if(!active||e.target.matches('input'))return;keys.add(e.code);if(['Space','KeyM','KeyK','KeyJ'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='KeyM')tool('map');if(e.code==='KeyK')tool('compass');if(e.code==='KeyJ')tool('assignment');if(e.code==='KeyG')interact();if(e.code==='KeyV')drink();if(e.code==='KeyB')eat();if(e.code==='KeyF')fire();if(e.code==='KeyZ')sleep();if(e.code==='KeyN')snare();if(e.code==='KeyI')openBag();if(e.code==='KeyL'){torch.toggle();syncTorch();}if(e.code==='Space'&&!view.blocking)player.jumpBuffer=player.time+.12;});
 document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);});
 touch=createTouchControls(renderer.domElement,{enabled:matchMedia('(any-pointer: coarse)').matches||params.has('touch'),canMove:()=>active&&!view.blocking&&!inventory?.open,look:(x,y)=>{player.yaw-=x*.004;player.pitch=THREE.MathUtils.clamp(player.pitch-y*.004,-Math.PI/2+.01,Math.PI/2-.01);},jump:()=>player.jumpBuffer=player.time+.12,pause});

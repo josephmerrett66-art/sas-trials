@@ -1,3 +1,4 @@
+import {BergenGrid} from './bergen-grid.js?v=1';
 // Bergen packing and field condition. Pure state: no DOM or rendering, so it can be tested in node.
 export const BASE_WEIGHT=6; // bergen, clothing, map, compass and torch
 export const ITEMS=[
@@ -28,12 +29,23 @@ export const fatigueWord=h=>h<TIRED_HOURS?'Rested':h<21?'Tired':'Exhausted';
 const fatiguePace=h=>h<TIRED_HOURS?1:1-.35*Math.min(1,(h-TIRED_HOURS)/(SPENT_HOURS-TIRED_HOURS));
 
 export class FieldKit {
- constructor(random=Math.random){this.random=random;this.loadout=defaultLoadout();this.reset();}
- reset(){this.packed=false;this.hydration=100;this.energy=100;this.warmth=100;this.awake=2;this.wet=0;this.wood=0;this.raw=0;this.cooked=0;this.snares=0;this.water=0;this.untreated=0;this.rations=0;this.sick=0;this.empty=0;this.cold=0;this.withdrawn=null;this.message='';this.time=0;}
- set(id,count){const item=ITEMS.find(i=>i.id===id);if(!item||this.packed)return;this.loadout[id]=Math.max(0,Math.min(item.max,Math.round(count)));}
+ // Everything carried lives in the bergen grid: the packing list is just what fits in it.
+ constructor(random=Math.random){this.random=random;this.bergen=new BergenGrid();this.layout=null;for(const [id,n] of Object.entries(defaultLoadout()))this.bergen.setCount(id,n);this.reset();}
+ // A new attempt repacks the bergen exactly as it was last packed.
+ reset(){if(this.layout)this.bergen.load(this.layout);this.packed=false;this.hydration=100;this.energy=100;this.warmth=100;this.awake=2;this.wet=0;this.wood=0;this.raw=0;this.cooked=0;this.water=0;this.untreated=0;this.sick=0;this.empty=0;this.cold=0;this.withdrawn=null;this.message='';this.time=0;}
+ get loadout(){return Object.fromEntries(ITEMS.map(i=>[i.id,this.bergen.count(i.id)]));}
+ // Adds or removes items at the first free spot. False when there is no room for more.
+ set(id,count){const item=ITEMS.find(i=>i.id===id);if(!item||this.packed)return false;return this.bergen.setCount(id,Math.max(0,Math.min(item.max,Math.round(count))));}
+ // Food, wood and snares carried are the blocks in the bergen.
+ get rations(){return this.bergen.count('rations');}set rations(n){this.bergen.setCount('rations',n);}
+ get snares(){return this.bergen.count('snares');}set snares(n){this.bergen.setCount('snares',n);}
+ get wood(){return this.bergen.count('wood');}set wood(n){this.bergen.setCount('wood',n);}
+ get raw(){return this.bergen.count('raw');}set raw(n){this.bergen.setCount('raw',n);}
+ get cooked(){return this.bergen.count('cooked');}set cooked(n){this.bergen.setCount('cooked',n);}
+ roomFor(ids){return this.bergen.roomFor(ids);}
  get bottles(){return this.loadout.water;}
  has(id){return (this.loadout[id]??0)>0;}
- pack(){this.packed=true;this.water=this.bottles*LITRE;this.untreated=0;this.rations=this.loadout.rations;this.snares=this.loadout.snares;this.message=`Packed ${this.weight.toFixed(1)} kg`;}
+ pack(){this.layout=this.bergen.save();this.packed=true;this.water=this.bottles*LITRE;this.untreated=0;this.message=`Packed ${this.weight.toFixed(1)} kg`;}
  // Live weight falls as water is drunk and rations are eaten.
  get weight(){if(!this.packed)return packWeight(this.loadout);return BASE_WEIGHT+this.bottles*BOTTLE_EMPTY+this.water+this.rations*RATION_WEIGHT+this.wood*WOOD_WEIGHT+(this.raw+this.cooked)*MEAT_WEIGHT+ITEMS.filter(i=>!['water','rations'].includes(i.id)).reduce((sum,i)=>sum+i.weight*this.loadout[i.id],0);}
  get pace(){return loadPace(this.weight)*Math.min(conditionPace(this.hydration),conditionPace(this.energy),conditionPace(this.warmth))*fatiguePace(this.awake);}
@@ -50,11 +62,12 @@ export class FieldKit {
  // Without a choice: cooked rabbit, then rations, then raw meat. The backpack can pick one.
  eat(kind=null){
   if(!this.packed||this.withdrawn)return false;
-  if(kind==='raw'){if(this.raw<=0){this.message='No raw meat.';return false;}const keep=this.rations;this.rations=0;const cooked=this.cooked;this.cooked=0;const done=this.eat();this.rations=keep;this.cooked=cooked;return done;}
+  if(kind==='raw'&&this.raw<=0){this.message='No raw meat.';return false;}
+  const rawOnly=kind==='raw'||(this.cooked<=0&&this.rations<=0);
   if(kind==='ration'&&this.rations<=0){this.message='No rations left.';return false;}
   if(kind==='cooked'&&this.cooked<=0){this.message='No cooked meat.';return false;}
-  if(this.cooked>0&&kind!=='ration'){this.cooked--;this.energy=Math.min(100,this.energy+45);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
-  if(this.rations<=0&&this.raw>0){this.raw--;this.energy=Math.min(100,this.energy+20);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
+  if(!rawOnly&&this.cooked>0&&kind!=='ration'){this.cooked--;this.energy=Math.min(100,this.energy+45);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
+  if(rawOnly&&this.raw>0){this.raw--;this.energy=Math.min(100,this.energy+20);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
   if(this.rations<=0){this.message='No food left.';return false;}
   this.rations--;const hot=this.has('stove');this.energy=Math.min(100,this.energy+(hot?55:35));
   this.message=`${hot?'Hot ration':'Cold ration'} eaten · ${this.rations} left`;return true;
@@ -70,7 +83,7 @@ export class FieldKit {
  gatherWood(){
   if(!this.packed||this.withdrawn)return false;
   if(this.wood>=MAX_WOOD){this.message=`Carrying all the wood you can (${MAX_WOOD} bundles).`;return false;}
-  this.wood++;this.message=`Gathered dead wood · ${this.wood} bundle${this.wood>1?'s':''}`;return true;
+  if(!this.bergen.autoPlace('wood')){this.message='No room in your bergen for wood. Rearrange it, or burn or eat something.';return false;}this.message=`Gathered dead wood · ${this.wood} bundle${this.wood>1?'s':''}`;return true;
  }
  // Returns the hours of fuel for a new fire, or 0 when it cannot be lit.
  lightFire(){
@@ -89,7 +102,7 @@ export class FieldKit {
  cook(){
   if(!this.packed||this.withdrawn)return false;
   const boil=this.untreated>.001&&this.has('stove'),done=[];
-  if(this.raw>0){done.push(`cooked ${this.raw} rabbit`);this.cooked+=this.raw;this.raw=0;}
+  if(this.raw>0){done.push(`cooked ${this.raw} rabbit`);this.bergen.convert('raw','cooked');}
   if(boil){done.push(`boiled ${this.untreated.toFixed(1)} L`);this.untreated=0;}
   if(!done.length){this.message=this.untreated>.001?'Nothing to cook. A mess tin would let you boil water.':'Nothing to cook.';return false;}
   this.message=`At the fire: ${done.join(', ')}.`;return true;
@@ -100,8 +113,8 @@ export class FieldKit {
   this.snares--;this.message='Snare set on a run. Come back in a few hours.';return true;
  }
  // Checking a snare always recovers the wire; it may hold a rabbit.
- recoverSnare(caught){this.snares++;if(caught)this.raw++;this.message=caught?'A rabbit in the snare. Cook it at a fire.':'Nothing yet. Snare lifted.';}
- catchRabbit(){this.raw++;this.message='Your throwing stick drops a rabbit. Cook it at a fire.';}
+ recoverSnare(caught){this.bergen.autoPlace('snares');if(caught)this.bergen.autoPlace('raw');this.message=caught?'A rabbit in the snare. Cook it at a fire.':'Nothing yet. Snare lifted.';}
+ catchRabbit(){this.bergen.autoPlace('raw');this.message='Your throwing stick drops a rabbit. Cook it at a fire.';}
  // Sleep through the night. Returns the hours actually slept (a fire that dies, or no
  // shelter, wakes you early). fire: hours of fuel left; rain: 0..1.
  sleep(hours,{fire=0,rain=0}={}){

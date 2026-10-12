@@ -1,4 +1,5 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD} from './kit.js?v=backpack-1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD} from './kit.js?v=bergen-1';
+import {BergenView} from './bergen-view.js?v=1';
 
 // What the backpack shows: each thing you carry with what you can do with it here and now.
 // Pure data so it can be tested without a page. near: what is within reach of the player.
@@ -27,16 +28,19 @@ export class InventoryView {
   this.root.hidden=false;this.toggleButton.hidden=!enabled;this.rendered='';
   this.toggleButton.onclick=()=>this.open?this.close():this.show();
   this.sheet.querySelector('[data-kit="close"]').onclick=()=>this.close();
+  // The bergen itself sits at the top: rearrange it to make room for wood and game.
+  this.bergenView=typeof document.createElement==='function'?new BergenView(this.sheet.querySelector('#kit-bergen'),kit.bergen,{cell:enabled?30:32,onChange:()=>{this.rendered='';this.render();}}):null;this.layoutKey='';
   this.body.onclick=e=>{const button=e.target.closest?.('button[data-act]');if(button&&!button.disabled)this.use(button.dataset.act);};
  }
  get open(){return !this.sheet.hidden;}
  show(){this.sheet.hidden=false;this.toggleButton.setAttribute('aria-expanded','true');this.rendered='';this.render();this.focusFirst();}
- hide(){if(this.sheet.hidden)return;this.sheet.hidden=true;this.toggleButton.setAttribute('aria-expanded','false');}
+ hide(){this.bergenView?.cancel();if(this.sheet.hidden)return;this.sheet.hidden=true;this.toggleButton.setAttribute('aria-expanded','false');}
  close(){if(!this.open)return;this.hide();this.onClose();}
  use(act){const fn=this.actions[act];if(!fn)return;fn();this.render();}
  // Called from the HUD tick; rewrites the sheet only when something it shows has changed.
  render(){
   if(!this.open)return;
+  if(this.bergenView&&!this.bergenView.hand){const key=this.kit.bergen.items.map(o=>`${o.uid}${o.id}${o.x}${o.y}${o.turned}`).join();if(key!==this.layoutKey){this.layoutKey=key;this.bergenView.render();}}
   const kit=this.kit,rows=backpackRows(kit,this.near()),gear=GEAR.filter(([id])=>kit.has(id)).map(([,name])=>name);
   const condition=[['Hydration',hydrationWord(kit.hydration)],['Energy',energyWord(kit.energy)],['Warmth',warmthWord(kit.warmth)],['Sleep',fatigueWord(kit.awake)]];
   const html=`<p class="kit-condition">${condition.map(([k,v])=>`<span>${k} <b>${v}</b></span>`).join('')}${kit.sick>0?'<span><b>Unwell</b></span>':''}</p>`+

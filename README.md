@@ -1,3 +1,11 @@
+# Packing the bergen by hand
+
+The bergen is a 6 × 7 grid (`bergen-grid.js`), and everything you take is a block that has to fit: water bottles 1×2, ration packs 2×1, filter, fire steel and snare wire 1×1, stove 2×2, waterproof 3×2, sleeping bag 2×4. On the packing screen, drag kit from the list into the bergen, or tap it and tap a space. Turn the piece in hand with R, a right click or Turn. Drag a block out (or use −) to unpack it. Keyboard: Enter picks up, arrows move, Enter drops, Delete unpacks.
+
+What you collect has to fit too: a bundle of wood is 1×3 and a rabbit 2×1. With a full bergen you cannot gather more wood, throw for a rabbit or lift a snare that holds one until you make room, by rearranging (the grid is at the top of the KIT sheet, Tab), eating or burning something. A new attempt repacks your last layout.
+
+Checks: all node tests pass, with tests/bergen.mjs covering fitting, turning, moving, auto-placement, room checks, kit counts and repacking. Browser-checked: dragging the waterproof in, tap-and-turn for the sleeping bag, dragging a bottle out to unpack, stepping off, and gathering wood into the bergen on the move. Packing on Xbox is not supported yet.
+
 # Bergen (backpack)
 
 Open your bergen with Tab or I on a keyboard, the right stick click on Xbox, or the KIT button on a phone. The world keeps running while it is open; the mouse is freed so you can click, and Tab, I or Close puts it away and takes the mouse back (click the scene if the browser asks).
