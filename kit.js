@@ -47,9 +47,13 @@ export class FieldKit {
   return true;
  }
  // Cooked meat first, then rations, and raw meat only when nothing else is left.
- eat(){
+ // Without a choice: cooked rabbit, then rations, then raw meat. The backpack can pick one.
+ eat(kind=null){
   if(!this.packed||this.withdrawn)return false;
-  if(this.cooked>0){this.cooked--;this.energy=Math.min(100,this.energy+45);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
+  if(kind==='raw'){if(this.raw<=0){this.message='No raw meat.';return false;}const keep=this.rations;this.rations=0;const cooked=this.cooked;this.cooked=0;const done=this.eat();this.rations=keep;this.cooked=cooked;return done;}
+  if(kind==='ration'&&this.rations<=0){this.message='No rations left.';return false;}
+  if(kind==='cooked'&&this.cooked<=0){this.message='No cooked meat.';return false;}
+  if(this.cooked>0&&kind!=='ration'){this.cooked--;this.energy=Math.min(100,this.energy+45);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
   if(this.rations<=0&&this.raw>0){this.raw--;this.energy=Math.min(100,this.energy+20);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
   if(this.rations<=0){this.message='No food left.';return false;}
   this.rations--;const hot=this.has('stove');this.energy=Math.min(100,this.energy+(hot?55:35));

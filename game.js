@@ -9,7 +9,7 @@ import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE,rivers,riverAt} from './terrain.js?v=big-1';
 import {ValleyRiver} from './river.js?v=big-1';
 import {Controller,defaults} from './controller.js?v=vitals-1';
-import {GamepadInput} from './gamepad.js?v=camp-1';
+import {GamepadInput} from './gamepad.js?v=backpack-1';
 import {createForest,collideForest} from './forest.js?v=big-1';
 import {MovementFeel,LookSway} from './feel.js?v=recorded-audio-1';
 import {PlayerLean,leanInput} from './lean.js';
@@ -22,10 +22,10 @@ import {ForestTorch,installTorchOptics} from './torch.js?v=daycycle-1';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=big-1';
 import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=big-1';
 import {HeldNavigation} from './held-navigation.js?v=baseplate-1';
-import {FieldKit} from './kit.js?v=vitals-1';
+import {FieldKit} from './kit.js?v=backpack-1';
 import {findSprings,addSprings,nearbySpring,updateSpringVisibility} from './springs.js?v=big-1';
-import {PackingView} from './packing-view.js?v=vitals-1';
-import {InventoryView} from './inventory-view.js?v=vitals-1';
+import {PackingView} from './packing-view.js?v=backpack-1';
+import {InventoryView} from './inventory-view.js?v=backpack-1';
 import {DayClock,formatClock} from './daycycle.js?v=1';
 import {Camp} from './camp.js?v=big-1';
 import {Wildlife} from './wildlife.js?v=big-1';
@@ -76,6 +76,9 @@ function resetRun(){kit.reset();clock.reset();camp.reset();wildlife.reset();gath
 let packing=null,duskWarned=-1;const gathered=new Set();resetRun();view.close();
 function setActive(value){touch?.reset();active=value;soundscape.setActive(value);document.body.classList.toggle('playing',value);keys.clear();player.jumpBuffer=0;accumulator=0;if(value){feel.unlockAudio();if(!started){started=true;if(view.panel!=='assignment')view.toggle('assignment');}}play.firstChild.textContent='RESUME EXERCISE ';}
 function pause(){inventory?.hide();setActive(false);if(locked)document.exitPointerLock();}
+// The backpack frees the mouse without pausing: the world (and the clock) keeps going.
+function openBag(){if(!active||!kit.packed||inventory.open)return;keys.clear();inventory.show();if(locked)document.exitPointerLock();}
+function closeBag(){if(active&&!controllerMode&&!touch?.enabled&&!locked)renderer.domElement.requestPointerLock()?.catch?.(()=>{});}
 function readPad(){try{return gamepad.read(navigator.getGamepads?.()??[],player.config.deadzone,player.config.stickCurve);}catch{return null;}}
 const fields=[['size','Player size',.7,2.2,.05],['walk','Walk speed',2,10,.1],['sprint','Sprint speed',5,16,.1],['acceleration','Acceleration',10,90,1],['braking','Braking',5,80,1],['directionGrip','Direction grip',0,24,1],['airControl','Air control',0,25,.5],['jump','Jump height',.5,2.5,.05],['sensitivity','Mouse sensitivity',.0005,.005,.0001],['fov','Field of view',65,110,1],['stickSensitivity','Stick look speed',.5,5,.1],['stickCurve','Stick precision curve',1,2.4,.1],['deadzone','Stick dead zone',.05,.35,.01],['juice','Camera motion',0,2,.1],['footstepVolume','Footstep volume',0,1,.05]];
 for(const [key,name,min,max,step] of fields){const label=document.createElement('label');label.className='setting';label.innerHTML=`${name}<output></output><input type="range" min="${min}" max="${max}" step="${step}" value="${player.config[key]}" aria-label="${name}">`;const input=label.querySelector('input'),out=label.querySelector('output');const sync=()=>{if(key==='size'){player.setSize(Number(input.value));collideForest(player,obstacles);}else player.config[key]=Number(input.value);out.value=key==='sensitivity'?(Number(input.value)*1000).toFixed(1):Number(input.value).toFixed((key==='jump'||key==='deadzone'||key==='size'||key==='adsSensitivity')?2:1)+(key==='size'?'×':'');};input.addEventListener('input',sync);sync();document.querySelector('#sliders').appendChild(label);}
@@ -86,7 +89,9 @@ function begin(){if(kit.withdrawn)resetRun();if(kit.packed)return true;if(packin
 packing=new PackingView(kit,{clock,onStepOff:()=>{stepOff();start();}});
 play.onclick=()=>{if(begin())start();};
 async function start(){feel.unlockAudio();if(readPad()){controllerMode=true;setActive(true);return;}if(touch?.enabled){controllerMode=true;setActive(true);return;}controllerMode=false;try{await renderer.domElement.requestPointerLock();}catch{hint.textContent='Mouse capture needs a desktop browser. Xbox controller is also supported.';}}
-document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===renderer.domElement;if(locked)setActive(true);else if(!controllerMode)setActive(false);});
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===renderer.domElement;if(locked)setActive(true);else if(!controllerMode&&!inventory?.open)setActive(false);});
+// After closing the backpack, a click on the world takes the mouse back if the browser refused.
+renderer.domElement.addEventListener('click',()=>{if(active&&!locked&&!controllerMode&&!touch?.enabled&&!inventory?.open)renderer.domElement.requestPointerLock()?.catch?.(()=>{});});
 document.addEventListener('mousemove',e=>{if(!locked||view.blocking)return;player.yaw-=e.movementX*player.config.sensitivity;player.pitch=THREE.MathUtils.clamp(player.pitch-e.movementY*player.config.sensitivity,-Math.PI/2+.01,Math.PI/2-.01);});
 // Springs and the river both fill bottles; standing in or beside the water is enough.
 const riverProbe={};function nearRiver(){const q=riverAt(player.x,player.z,riverProbe);return !!q.river&&q.d<q.w+2.5&&player.y<q.S+1.5;}
@@ -98,18 +103,30 @@ function nearTree(){let best=null,bd=2.6;for(const o of nearbyObstacles(obstacle
 function rabbitInSight(){const f=forward();return wildlife.target(player,f.x,f.z);}
 // G does the most useful thing within reach: post, snare, fire, water, rabbit, then wood.
 function interact(){
- if(!exercise.complete&&exercise.nearby(player)){if(exercise.interact(player))view.update(player);return;}
+ if(registerPost())return;
  if(!kit.packed)return;
- const snare=camp.nearSnare(player);if(snare){kit.recoverSnare(camp.checkSnare(snare,clock.hours));say(kit.message);view.drawMap();return;}
- if(camp.lit&&camp.near(player)&&kit.wood>0){camp.fire.fuel=kit.stokeFire(camp.fire.fuel);say(kit.message);return;}
- if(nearWater()){kit.refill();say(kit.message);return;}
- const rabbit=rabbitInSight();if(rabbit){if(wildlife.throwAt(rabbit,player))kit.catchRabbit();else kit.message='Missed. It bolts for cover.';say(kit.message);return;}
- const tree=nearTree();if(tree){if(kit.gatherWood())gathered.add(tree);say(kit.message);return;}
+ if(camp.nearSnare(player))return liftSnare();
+ if(camp.lit&&camp.near(player)&&kit.wood>0)return stokeFire();
+ if(nearWater())return fill();
+ if(rabbitInSight())return throwStick();
+ if(nearTree())return gatherWood();
  if(camp.lit&&camp.near(player)){say('No wood to add. Gather dead wood under the trees.');}
 }
 function fire(){
  if(!kit.packed)return;
- if(camp.lit&&camp.near(player)){kit.cook();say(kit.message);return;}
+ if(camp.lit&&camp.near(player))return cookFood();
+ lightFire();
+}
+// Single actions, shared by the keys and the backpack.
+function registerPost(){if(exercise.complete||!exercise.nearby(player))return false;if(exercise.interact(player))view.update(player);return true;}
+function liftSnare(){const snare=camp.nearSnare(player);if(!snare||!kit.packed)return;kit.recoverSnare(camp.checkSnare(snare,clock.hours));say(kit.message);view.drawMap();}
+function stokeFire(){if(!kit.packed||!camp.lit||!camp.near(player))return;camp.fire.fuel=kit.stokeFire(camp.fire.fuel);say(kit.message);}
+function fill(){if(!kit.packed)return;if(!nearWater()){say('No water within reach. Find a spring, stream or river.');return;}kit.refill();say(kit.message);}
+function throwStick(){const rabbit=rabbitInSight();if(!rabbit||!kit.packed)return;if(wildlife.throwAt(rabbit,player))kit.catchRabbit();else kit.message='Missed. It bolts for cover.';say(kit.message);}
+function gatherWood(){const tree=nearTree();if(!tree||!kit.packed){say('No dead wood within reach. Stand beside a big tree.');return;}if(kit.gatherWood())gathered.add(tree);say(kit.message);}
+function cookFood(){if(!kit.packed)return;if(!(camp.lit&&camp.near(player))){say('Cook beside a lit fire.');return;}kit.cook();say(kit.message);}
+function lightFire(){
+ if(!kit.packed)return;
  if(nearRiver()){say('Too wet to light a fire here.');return;}
  const fuel=kit.lightFire();if(fuel){const f=forward();camp.light(player.x+f.x*1.4,player.z+f.z*1.4,fuel);view.drawMap();}say(kit.message);
 }
@@ -132,16 +149,16 @@ function fieldPrompt(){
  return '';
 }
 function drink(){kit.drink();say(kit.message);}
-function eat(){kit.eat();say(kit.message);}
+function eat(kind=null){kit.eat(kind);say(kit.message);}
 function tool(name){feel.unlockAudio();if(name==='interact')interact();else view.toggle(name);keys.clear();touch?.reset();}
 for(const button of document.querySelectorAll('[data-tool]'))button.onclick=()=>tool(button.dataset.tool);
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>view.close();
 for(const button of document.querySelectorAll('[data-restart]'))button.onclick=resetRun;
-document.addEventListener('keydown',e=>{if(e.code==='Escape'){pause();return;}if(e.code==='KeyR'&&!active&&!e.repeat){resetRun();return;}if(!active||e.target.matches('input'))return;keys.add(e.code);if(['Space','KeyM','KeyK','KeyJ'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='KeyM')tool('map');if(e.code==='KeyK')tool('compass');if(e.code==='KeyJ')tool('assignment');if(e.code==='KeyG')interact();if(e.code==='KeyV')drink();if(e.code==='KeyB')eat();if(e.code==='KeyF')fire();if(e.code==='KeyZ')sleep();if(e.code==='KeyN')snare();if(e.code==='KeyL'){torch.toggle();syncTorch();}if(e.code==='Space'&&!view.blocking)player.jumpBuffer=player.time+.12;});
+document.addEventListener('keydown',e=>{if(inventory?.open&&active){if(e.code==='Escape'){pause();return;}if(['Tab','KeyI'].includes(e.code)){e.preventDefault();inventory.close();return;}if(['ArrowDown','ArrowRight','KeyS','KeyD'].includes(e.code)){e.preventDefault();inventory.move(1);}else if(['ArrowUp','ArrowLeft','KeyW','KeyA'].includes(e.code)){e.preventDefault();inventory.move(-1);}return;}if(e.code==='Tab'&&active){e.preventDefault();if(!e.repeat)openBag();return;}if(e.code==='Escape'){pause();return;}if(e.code==='KeyR'&&!active&&!e.repeat){resetRun();return;}if(!active||e.target.matches('input'))return;keys.add(e.code);if(['Space','KeyM','KeyK','KeyJ'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='KeyM')tool('map');if(e.code==='KeyK')tool('compass');if(e.code==='KeyJ')tool('assignment');if(e.code==='KeyG')interact();if(e.code==='KeyV')drink();if(e.code==='KeyB')eat();if(e.code==='KeyF')fire();if(e.code==='KeyZ')sleep();if(e.code==='KeyN')snare();if(e.code==='KeyI')openBag();if(e.code==='KeyL'){torch.toggle();syncTorch();}if(e.code==='Space'&&!view.blocking)player.jumpBuffer=player.time+.12;});
 document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);});
 touch=createTouchControls(renderer.domElement,{enabled:matchMedia('(any-pointer: coarse)').matches||params.has('touch'),canMove:()=>active&&!view.blocking&&!inventory?.open,look:(x,y)=>{player.yaw-=x*.004;player.pitch=THREE.MathUtils.clamp(player.pitch-y*.004,-Math.PI/2+.01,Math.PI/2-.01);},jump:()=>player.jumpBuffer=player.time+.12,pause});
-inventory=new InventoryView(kit,{enabled:touch.enabled,drink,eat,fill:interact,register:interact,wood:interact,fire,sleep,snare,near:()=>({spring:nearWater(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable})});
+inventory=new InventoryView(kit,{enabled:touch.enabled,near:()=>({water:nearWater(),wet:nearRiver(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable}),actions:{drink,'eat-ration':()=>eat('ration'),'eat-cooked':()=>eat('cooked'),'eat-raw':()=>eat('raw'),fill,register:registerPost,gather:gatherWood,light:lightFire,stoke:stokeFire,cook:cookFood,snare,lift:liftSnare,throw:throwStick,sleep},onClose:closeBag});
 if(touch.enabled)hint.textContent='Left joystick: move · Drag the scene: look · Tap Jump and hold Run';
 const graphics=renderer.getContext(),gpuTimer=new GpuTimer(graphics),adapterExtension=graphics.getExtension('WEBGL_debug_renderer_info'),adapter=adapterExtension?graphics.getParameter(adapterExtension.UNMASKED_RENDERER_WEBGL):graphics.getParameter(graphics.RENDERER),frameMonitor=new FrameMonitor();
 let benchmarkStart=0,benchmarkDone=false,benchmarkWarm=false,benchmarkProbe=false,benchmarkResult=null;
@@ -154,8 +171,11 @@ renderer.info.autoReset=false;scene.matrixAutoUpdate=false;scene.matrixWorldAuto
 renderer.setAnimationLoop(now=>{
  if(document.hidden){last=lastFrame=now;return;}const cpuStart=performance.now(),frameMs=now-lastFrame;renderer.info.reset();
  if(benchmark&&!benchmarkDone){benchmarkStart||=now;const elapsed=(now-benchmarkStart)/1000;player.yaw=benchmarkLandmark?.55+Math.sin(elapsed*.25)*.3:Math.sin(elapsed*.25)*1.4;player.pitch=-.04;if(!benchmarkLandmark)keys.add('KeyW');if(params.has('armsrun'))keys.add('ShiftLeft');if(!benchmarkLandmark&&elapsed%3<.15)player.jumpBuffer=player.time+.12;if(elapsed>=10&&!benchmarkWarm){benchmarkWarm=true;frameMonitor.frames=[];}if(elapsed>=30&&!benchmarkProbe){benchmarkProbe=true;pause();benchmarkResult={...frameMonitor.summary(),mode:'navigation',shadows:forestShadowStats,audio:{state:soundscape.context?.state??'unavailable',recordings:soundscape.buffers?Object.fromEntries(Object.entries(soundscape.buffers).map(([name,buffer])=>[name,buffer.duration])):null},weather:weather.state.current,night:torch.dark,enemies:0,adapter,renderScale:renderBudget.scale,gpuMs:gpuTimer.ms,viewport:{width:innerWidth,height:innerHeight}};frameMonitor.frames=[];}if(elapsed>=36){benchmarkDone=true;benchmarkProbe=false;benchmarkOutput.textContent=JSON.stringify({...benchmarkResult,emptyRenderFps:frameMonitor.summary().fps},null,2);benchmarkOutput.dataset.result=benchmarkOutput.textContent;}}
- const dt=Math.min((now-last)/1000,.05);last=now;const pad=benchmark||params.has('navtest')?null:readPad();
+ const dt=Math.min((now-last)/1000,.05);last=now;let pad=benchmark||params.has('navtest')?null:readPad();
  if(controllerMode&&!pad&&!touch?.enabled&&!params.has('navtest')){pause();controllerMode=false;hint.textContent='Controller disconnected. Reconnect or use mouse + keyboard.';}
+ // Xbox: right stick click opens the backpack; the D-pad picks an action, A uses it, B closes.
+ if(pad&&active&&inventory.open){if(pad.bagPressed||pad.backPressed)inventory.close();else if(pad.pause){inventory.hide();pause();}else{if(pad.healPressed||pad.leftPressed)inventory.move(-1);if(pad.drinkPressed||pad.rightPressed)inventory.move(1);if(pad.jumpPressed)inventory.activate();}pad=null;}
+ else if(pad&&active&&pad.bagPressed)openBag();
  if(pad){if(!active&&pad.respawn)resetRun();if(pad.pause){if(active)pause();else if(begin()){controllerMode=true;setActive(true);}}else if(!active&&pad.jumpPressed){if(begin()){controllerMode=true;setActive(true);}}else if(active){if(pad.healPressed)eat();if(pad.drinkPressed)drink();if(pad.firePressed)fire();if(pad.campPressed)sleep();if(pad.respawn)snare();if(pad.previousPressed)tool('compass');if(pad.nextPressed)tool('assignment');if(pad.mapPressed)tool('map');if(pad.reloadPressed)interact();if(pad.jumpPressed&&!view.blocking)player.jumpBuffer=player.time+.12;}}
  const physicsStart=performance.now();
  if(active&&!view.blocking){if(pad){player.yaw-=pad.look.x*player.config.stickSensitivity*dt;player.pitch=THREE.MathUtils.clamp(player.pitch-pad.look.y*player.config.stickSensitivity*dt,-Math.PI/2+.01,Math.PI/2-.01);}movementInput.clear();for(const key of keys)movementInput.add(key);if(pad){if(pad.jump)movementInput.add('Space');if(pad.crouch)movementInput.add('KeyC');if(pad.sprint)movementInput.add('ShiftLeft');}if(touch?.sprint)movementInput.add('ShiftLeft');accumulator+=dt;while(accumulator>=1/120){const grounded=player.grounded,fall=-player.vy;player.step(1/120,movementInput,hud.bunny.checked,pad?.move??(touch?.enabled?touch.move:null));collideForest(player,obstacles);if(!grounded&&player.grounded)feel.landed(fall);if(grounded&&!player.grounded)feel.jumped();feel.step(1/120,player,player.config.juice);accumulator-=1/120;}exercise.step(dt,player);

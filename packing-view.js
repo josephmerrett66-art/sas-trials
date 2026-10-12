@@ -1,4 +1,4 @@
-import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=vitals-1';
+import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=backpack-1';
 
 // Kit list before the exercise, condition notes on the pause menu, and the strain vignette.
 export class PackingView {

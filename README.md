@@ -1,3 +1,21 @@
+# Bergen (backpack)
+
+Open your bergen with Tab or I on a keyboard, the right stick click on Xbox, or the KIT button on a phone. The world keeps running while it is open; the mouse is freed so you can click, and Tab, I or Close puts it away and takes the mouse back (click the scene if the browser asks).
+
+Every survival action is in it, item by item, and greyed out when it is not possible where you stand:
+- Water: drink, or fill at a spring, stream or river.
+- Rations: eat one.
+- Rabbit: eat cooked, cook at a fire (also boils untreated water with a mess tin), or eat raw and risk it.
+- Dead wood: gather beside a big tree, light a fire (fire steel and 2 bundles, not in water), or add wood to a lit fire.
+- Snare wire: set a snare, or lift one you are standing beside.
+- Throwing stick: throw at a rabbit in front of you.
+- Sleep: from 19:30 by a fire or in a sleeping bag.
+- At a checkpoint post, registering it appears at the top.
+
+Arrow keys (or W/S) and the D-pad move between actions; Enter, Space or A uses one; B closes it on Xbox. The keys G, F, Z, N, V and B still work as shortcuts. The sheet is ordinary page content rebuilt only when something it shows changes, so it adds no rendering work.
+
+Checks: all node tests pass; tests/inventory.mjs now covers every backpack action, when each is available, and choosing what to eat. Browser-checked on a laptop-sized screen (open with Tab, drink and eat with the keyboard, gather wood and light a fire by clicking, close with Tab) and a phone-sized screen.
+
 # Condition HUD
 
 Four slim bars sit in the bottom-left corner while you play: health, stamina, food and water. On a phone they move above the joystick, or to the top left in landscape.

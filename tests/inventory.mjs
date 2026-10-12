@@ -1,23 +1,24 @@
 import assert from 'node:assert/strict';
 import {FieldKit} from '../kit.js';
-import {InventoryView} from '../inventory-view.js';
+import {backpackRows} from '../inventory-view.js';
 
-const make=()=>({hidden:false,disabled:false,textContent:'',innerHTML:'',attrs:{},setAttribute(k,v){this.attrs[k]=v;}});
-const els={'#kit-sheet':make(),'#kit-toggle':make(),'#kit-contents':make(),'#kit-message':make(),'[data-kit="close"]':make(),'[data-kit="drink"]':make(),'[data-kit="eat"]':make(),'[data-kit="fill"]':make(),'[data-kit="register"]':make()};
-els['#kit-sheet'].hidden=true;els['#kit-sheet'].querySelector=q=>els[q];
-const root={hidden:false,querySelector:q=>els[q]};globalThis.document={querySelector:q=>q==='#kit-menu'?root:null};
-
-const kit=new FieldKit(()=>1);kit.pack();let near={spring:null,post:null},registered=0;
-const desktop=new InventoryView(kit,{enabled:false,drink(){},eat(){},fill(){},register(){},near:()=>near});
-assert.equal(root.hidden,true,'no kit button without touch');assert.equal(desktop.open,false);
-
-const view=new InventoryView(kit,{enabled:true,drink:()=>kit.drink(),eat:()=>kit.eat(),fill:()=>kit.refill(),register:()=>registered++,near:()=>near});
-assert.equal(root.hidden,false);assert.equal(view.open,false);
-els['#kit-toggle'].onclick();assert.equal(view.open,true);assert.equal(els['#kit-toggle'].attrs['aria-expanded'],'true');
-assert.match(els['#kit-contents'].innerHTML,/2\.0 L/);assert.equal(els['[data-kit="fill"]'].disabled,true,'no spring nearby');assert.equal(els['[data-kit="register"]'].hidden,true);
-els['[data-kit="drink"]'].onclick();assert.match(els['#kit-contents'].innerHTML,/1\.5 L/);assert.match(els['#kit-message'].textContent,/Drank/);
-kit.energy=50;els['[data-kit="eat"]'].onclick();els['[data-kit="eat"]'].onclick();assert.equal(kit.rations,0);assert.equal(els['[data-kit="eat"]'].disabled,true,'no rations left');
-near={spring:{x:0,z:0},post:{code:'C'}};view.render();assert.equal(els['[data-kit="fill"]'].disabled,false);assert.equal(els['[data-kit="register"]'].hidden,false);assert.match(els['[data-kit="register"]'].textContent,/post C/);
-els['[data-kit="fill"]'].onclick();assert.equal(kit.water,2);els['[data-kit="register"]'].onclick();assert.equal(registered,1);
-els['[data-kit="close"]'].onclick();assert.equal(view.open,false);
-console.log('Passed touch-only kit button, contents, drink/eat/fill/register actions, disabled states and close.');
+const act=(rows,id)=>rows.flatMap(r=>r.actions).find(a=>a.act===id);
+const kit=new FieldKit(()=>1);kit.pack();
+let rows=backpackRows(kit,{});
+assert.deepEqual(rows.map(r=>r.id),['water','rations','rabbit','wood','snares','stick','sleep'],'every survival item has a row');
+assert.equal(act(rows,'drink').enabled,true);assert.equal(act(rows,'fill').enabled,false,'no water nearby');
+assert.equal(act(rows,'eat-ration').enabled,true);assert.equal(act(rows,'eat-cooked').enabled,false);assert.equal(act(rows,'eat-raw').enabled,false);
+assert.equal(act(rows,'light').enabled,false,'needs two bundles of wood');assert.equal(act(rows,'gather').enabled,false,'no tree in reach');
+assert.equal(act(rows,'snare').enabled,true);assert.equal(act(rows,'lift').enabled,false);assert.equal(act(rows,'throw').enabled,false);assert.equal(act(rows,'sleep').enabled,false,'too light to sleep');
+assert.match(rows[0].detail,/2\.0 of 2 L/);
+// Beside a tree with wood, then at a lit fire with a rabbit.
+kit.wood=2;rows=backpackRows(kit,{tree:true,water:true,rabbit:true,snare:{},post:{code:'C'},sleepable:true});
+assert.equal(rows[0].id,'post');assert.equal(act(rows,'register').label,'Register C');
+for(const id of ['gather','light','fill','throw','lift','sleep'])assert.equal(act(rows,id).enabled,true,id);
+assert.equal(backpackRows(kit,{wet:true}).flatMap(r=>r.actions).find(a=>a.act==='light').enabled,false,'no fires in the river');
+kit.raw=1;rows=backpackRows(kit,{fire:true});assert.equal(act(rows,'cook').enabled,true);assert.equal(act(rows,'stoke').enabled,true);assert.equal(act(rows,'light'),undefined,'a lit fire is stoked, not lit');
+// Choosing what to eat.
+kit.cooked=1;kit.energy=10;assert.equal(kit.eat('ration'),true);assert.equal(kit.cooked,1,'eating a ration keeps the cooked rabbit');assert.equal(kit.rations,1);
+assert.equal(kit.eat('raw'),true);assert.equal(kit.raw,0);assert.equal(kit.rations,1);assert.equal(kit.cooked,1,'eating raw keeps rations and cooked meat');
+assert.equal(kit.eat('cooked'),true);assert.equal(kit.cooked,0);assert.equal(kit.eat('cooked'),false);assert.equal(kit.eat('raw'),false);
+console.log('Passed backpack rows for every survival action, context-dependent availability and choosing what to eat.');

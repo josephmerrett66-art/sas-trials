@@ -29,22 +29,29 @@
 #strain{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:0;background:radial-gradient(ellipse at center,transparent 45%,#140c06 100%);transition:opacity 1.5s}
 body:not(.playing) #strain{display:none}
 @media(max-width:800px){#packing{left:25px;top:52%;padding:20px}#packing h2{font-size:28px}#kit-list li{grid-template-columns:1fr 50px 96px}}
-/* Touch-only bergen access. Stays faintly visible while the other touch controls are hidden. */
+/* The bergen: KIT button on touch, Tab / I / Xbox RS click elsewhere. */
 #kit-menu{display:none}
-body.touch-mode.playing #kit-menu:not([hidden]){display:block}
+body.playing #kit-menu:not([hidden]){display:block}
 #kit-toggle{position:fixed;z-index:37;right:max(22px,env(safe-area-inset-right));bottom:calc(112px + env(safe-area-inset-bottom));min-width:58px;min-height:44px;padding:0 14px;border-radius:22px;background:#e5d9b8cc;color:#303b31;border:1px solid #a89d7e;font:600 12px 'DM Sans',sans-serif;letter-spacing:1.5px;touch-action:manipulation}
 #kit-toggle[aria-expanded="true"]{background:#e5d9b8}
-#kit-sheet{position:fixed;z-index:56;right:max(16px,env(safe-area-inset-right));bottom:calc(166px + env(safe-area-inset-bottom));width:min(300px,calc(100vw - 32px));max-height:60dvh;overflow-y:auto;background:#e5d9b8;color:#303b31;border:1px solid #a89d7e;border-radius:3px;padding:14px 16px;box-shadow:0 12px 40px #0008}
+#kit-sheet{position:fixed;z-index:56;right:max(22px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);width:min(420px,calc(100vw - 32px));max-height:86dvh;overflow-y:auto;background:#e5d9b8;color:#303b31;border:1px solid #a89d7e;border-radius:3px;padding:14px 16px;box-shadow:0 12px 40px #0008}
+body.touch-mode #kit-sheet{top:auto;transform:none;bottom:calc(166px + env(safe-area-inset-bottom));max-height:60dvh}
 .kit-sheet-head{display:flex;justify-content:space-between;align-items:center}
-.kit-sheet-head .eyebrow{color:#62664d}
-#kit-sheet button{min-height:44px;border-radius:3px;background:#334034;color:#f4eddc;padding:0 12px;touch-action:manipulation}
+.kit-sheet-head .eyebrow{color:#62664d}.kit-sheet-head small{margin-left:8px;letter-spacing:0;opacity:.75}
+body.touch-mode .kit-sheet-head small{display:none}
+#kit-sheet button{min-height:34px;border-radius:3px;background:#334034;color:#f4eddc;padding:0 10px;font:600 12px 'DM Sans',sans-serif;border:0;cursor:pointer;touch-action:manipulation}
+body.touch-mode #kit-sheet button{min-height:44px}
+#kit-sheet button:focus-visible{outline:2px solid #b5562f;outline-offset:2px}
 #kit-sheet .kit-sheet-head button{background:transparent;color:#303b31;text-decoration:underline;padding:0 4px}
-#kit-sheet button:disabled{opacity:.35}
-#kit-contents{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;margin:8px 0 12px;color:#4a5142}
-#kit-contents b{font-weight:600}
-.kit-sheet-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#kit-message{font-size:12px;color:#62664d;margin:10px 0 0;min-height:1em}
-@media(max-height:500px){#kit-toggle{bottom:calc(100px + env(safe-area-inset-bottom))}#kit-sheet{bottom:12px;right:96px;max-height:85dvh}}
+#kit-sheet button:disabled{opacity:.3;cursor:default}
+.kit-condition{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin:8px 0 6px;color:#4a5142}
+.kit-condition b{font-weight:600}
+.kit-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid #a89d7e66}
+.kit-row strong{display:block;font-size:13px}.kit-row small{display:block;font-size:11px;color:#62664d;margin-top:2px}
+.kit-acts{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:230px}
+.kit-gear{font-size:11px;color:#62664d;margin:8px 0 0;border-top:1px solid #a89d7e66;padding-top:8px}
+#kit-message{font-size:12px;color:#62664d;margin:8px 0 0;min-height:1em}
+@media(max-height:500px){#kit-toggle{bottom:calc(100px + env(safe-area-inset-bottom))}body.touch-mode #kit-sheet{bottom:12px;right:96px;max-height:85dvh}}
 /* Sleeping: a short fade to black and back, with the time you wake. */
 #sleep-fade{position:fixed;inset:0;z-index:58;pointer-events:none;background:#07090b;display:flex;align-items:center;justify-content:center;opacity:0}
 #sleep-fade p{font:500 22px 'Space Grotesk',sans-serif;color:#e9e6d9;letter-spacing:.5px;text-align:center;padding:0 24px}
