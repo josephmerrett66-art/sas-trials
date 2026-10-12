@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {collideForest} from './forest.js?v=gullies-1-r1';
+import {collideForest} from './forest.js?v=big-1';
 
 export class Pursuer {
   constructor(scene,obstacles,feel){

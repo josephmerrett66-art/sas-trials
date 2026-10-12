@@ -1,10 +1,11 @@
 import * as THREE from './vendor/three.module.js';
 
 // Fit a single static shadow map to the entire playable forest, not the view camera.
-export function fitForestShadows(light,scene){
+// Pass a box to fit a known area (the streamed chunks around the player) instead.
+export function fitForestShadows(light,scene,area=null){
  scene.updateMatrixWorld(true);
- const bounds=new THREE.Box3();
- scene.traverse(mesh=>{
+ const bounds=area?area.clone():new THREE.Box3();
+ if(!area)scene.traverse(mesh=>{
   if(!mesh.isMesh||(!mesh.castShadow&&!mesh.receiveShadow))return;
   if(mesh.isInstancedMesh){mesh.computeBoundingBox();bounds.union(mesh.boundingBox.clone().applyMatrix4(mesh.matrixWorld));}
   else bounds.union(new THREE.Box3().setFromObject(mesh));

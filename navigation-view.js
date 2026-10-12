@@ -1,7 +1,7 @@
-import {trails} from './landmark-routes.js?v=no-river-1';
+import {trails} from './landmark-routes.js?v=big-1';
 import * as THREE from './vendor/three.module.js';
-import {terrainHeight,WORLD_SIZE} from './terrain.js?v=river-1';
-import {START,gridReference,coordinates} from './navigation.js?v=irregular-route-1-r1';
+import {terrainHeight,WORLD_SIZE} from './terrain.js?v=big-1';
+import {START,gridReference,coordinates} from './navigation.js?v=big-1';
 import {formatClock} from './daycycle.js?v=1';
 
 export function addCheckpointPosts(scene,points){

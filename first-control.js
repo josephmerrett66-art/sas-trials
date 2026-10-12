@@ -1,5 +1,6 @@
-import {mainTrail} from './landmark-routes.js?v=no-river-1';
-const attack={x:mainTrail.center(-594),z:-594};
+import {mainTrail} from './landmark-routes.js?v=big-1';
+import {S} from './world-size.js?v=big-1';
+const attack={x:mainTrail.center(Math.round(S(-594))),z:Math.round(S(-594))};
 const north={x:attack.x-45,z:attack.z-35,size:3.4,rotation:.35,shade:1};
 const south={x:north.x+8,z:north.z+16,size:2.8,rotation:1.8,shade:.94};
 export const FIRST_CONTROL={attack,north,south,post:{x:north.x+4.7,z:north.z}};

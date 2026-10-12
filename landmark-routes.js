@@ -1,3 +1,4 @@
+import {S,WORLD_SIZE,WORLD_SCALE} from './world-size.js?v=big-1';
 // Static, metre-sampled route fields: constant-cost queries for terrain and planting.
 // Smooth unequal bends give each trail its own recognisable geography.
 function route(name,points,width,level=null){
@@ -13,12 +14,14 @@ function route(name,points,width,level=null){
  const slope=z=>(center(z+1)-center(z-1))*.5;
  return {name,start,end,center,slope,width,level,distance:(x,z)=>z<start||z>end?Infinity:Math.abs(x-center(z))/Math.sqrt(1+slope(z)**2)};
 }
-const trailGuide=route('Trail guide', [[-720,-90],[-580,-145],[-400,-50],[-250,170],[-100,145],[0,85],[135,175],[280,125],[440,-60],[560,-95],[720,40]],z=>6.5+1.2*Math.sin(z/73)+.6*Math.sin(z/29));
+// Laid out on the old 1440 m map and scaled up with it.
+const scaled=points=>points.map(([z,x])=>[Math.round(S(z)),S(x)]);
+const trailGuide=route('Trail guide', scaled([[-720,-90],[-580,-145],[-400,-50],[-250,170],[-100,145],[0,85],[135,175],[280,125],[440,-60],[560,-95],[720,40]]),z=>6.5+1.2*Math.sin(z/73)+.6*Math.sin(z/29));
 // Preserve the existing trails; this guide no longer controls terrain or water.
-const bankPoints=[];for(let z=-720;z<=720;z+=30)bankPoints.push([z,trailGuide.center(z)-25-60*Math.exp(-z*z/9000)+7*Math.sin(z/108)]);
+const bankPoints=[];for(let z=-WORLD_SIZE/2;z<=WORLD_SIZE/2;z+=30)bankPoints.push([z,trailGuide.center(z)-S(25)-S(60)*Math.exp(-((z/WORLD_SCALE)**2)/9000)+S(7)*Math.sin(z/S(108))]);
 export const mainTrail=route('Valley trail',bankPoints,z=>2.15+.3*Math.sin(z/97));
 export const trails=[mainTrail,
- route('Ridge trail',[[-360,mainTrail.center(-360)],[-210,-110],[-45,-230],[140,-360],[340,-450],[530,-570],[720,-625]],z=>1.65+.2*Math.sin(z/61)),
- route('East trail',[[240,mainTrail.center(240)],[335,230],[450,350],[570,440],[720,590]],z=>1.65+.2*Math.sin(z/71))];
+ route('Ridge trail',[[Math.round(S(-360)),mainTrail.center(Math.round(S(-360)))],...scaled([[-210,-110],[-45,-230],[140,-360],[340,-450],[530,-570],[720,-625]])],z=>1.65+.2*Math.sin(z/61)),
+ route('East trail',[[Math.round(S(240)),mainTrail.center(Math.round(S(240)))],...scaled([[335,230],[450,350],[570,440],[720,590]])],z=>1.65+.2*Math.sin(z/71))];
 export function trailClearance(x,z){let d=Infinity;for(const r of trails)d=Math.min(d,r.distance(x,z)-r.width(z));return d;}
 export const trailCenter=z=>mainTrail.center(z);

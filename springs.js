@@ -1,24 +1,25 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight,WORLD_SIZE,riverClearance} from './terrain.js?v=river-1';
-import {trailClearance} from './landmark-routes.js?v=no-river-1';
-import {START} from './navigation.js?v=irregular-route-1-r1';
-import {landmarkMaterial} from './landmark-builder.js?v=1-r1';
+import {terrainHeight,WORLD_SIZE,riverClearance} from './terrain.js?v=big-1';
+import {trailClearance} from './landmark-routes.js?v=big-1';
+import {START} from './navigation.js?v=big-1';
+import {landmarkMaterial} from './landmark-builder.js?v=big-1';
+import {nearbyObstacles} from './obstacle-grid.js';
 
 export const SPRING_REACH=3.2;
 // Springs sit at the bottom of natural hollows, away from trees, tracks and checkpoints,
 // spread so a route always passes within reach of one or two. Computed once.
-export function findSprings(obstacles,points,{spacing=260}={}){
+export function findSprings(obstacles,points,{spacing=300}={}){
  const half=WORLD_SIZE/2-40,candidates=[];
- for(let z=-half;z<=half;z+=10)for(let x=-half;x<=half;x+=10){
+ for(let z=-half;z<=half;z+=20)for(let x=-half;x<=half;x+=20){
   const h=terrainHeight(x,z);let depth=Infinity;
   for(let a=0;a<8;a++)depth=Math.min(depth,terrainHeight(x+Math.cos(a*Math.PI/4)*25,z+Math.sin(a*Math.PI/4)*25)-h);
-  if(depth<=.3)continue;
+  if(depth<=.15)continue;
   // Settle onto the true low point of the hollow.
-  let best={x,z,h};for(let dz=-8;dz<=8;dz++)for(let dx=-8;dx<=8;dx++){const y=terrainHeight(x+dx,z+dz);if(y<best.h)best={x:x+dx,z:z+dz,h:y};}
+  let best={x,z,h};for(let dz=-10;dz<=10;dz+=2)for(let dx=-10;dx<=10;dx+=2){const y=terrainHeight(x+dx,z+dz);if(y<best.h)best={x:x+dx,z:z+dz,h:y};}
   candidates.push({...best,depth},{x,z,h,depth:depth-.001});
  }
- const clear=p=>riverClearance(p.x,p.z)>25&&obstacles.every(o=>Math.hypot(p.x-o.x,p.z-o.z)>o.radius+4)&&trailClearance(p.x,p.z)>4&&points.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>40)&&Math.hypot(p.x-START.x,p.z-START.z)>60;
+ const near=[],clear=p=>riverClearance(p.x,p.z)>25&&nearbyObstacles(obstacles,p.x,p.z,4,near).every(o=>Math.hypot(p.x-o.x,p.z-o.z)>o.radius+4)&&trailClearance(p.x,p.z)>4&&points.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>40)&&Math.hypot(p.x-START.x,p.z-START.z)>60;
  const springs=[];
  for(const p of candidates.filter(clear).sort((a,b)=>b.depth-a.depth||a.x-b.x||a.z-b.z))if(springs.every(q=>Math.hypot(p.x-q.x,p.z-q.z)>spacing))springs.push({x:p.x,z:p.z,y:terrainHeight(p.x,p.z)});
  return springs;

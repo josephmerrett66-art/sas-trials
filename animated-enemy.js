@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
-import {terrainNormal} from './terrain.js?v=river-1';
+import {terrainNormal} from './terrain.js?v=big-1';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
-import {collideForest} from './forest.js?v=gullies-1-r1';
-import {Pursuer} from './pursuer.js?v=grounding-2-r1';
+import {collideForest} from './forest.js?v=big-1';
+import {Pursuer} from './pursuer.js?v=big-1';
 
 let templatePromise;
 function cloneRig(source){

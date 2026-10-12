@@ -13,7 +13,7 @@ const renderer={capabilities:{maxTextureSize:8192},shadowMap:{enabled:false,auto
  renderer.shadowMap.needsUpdate=false;sun.shadow.needsUpdate=false;
 }};
 const lightsBefore=[];scene.traverse(o=>{if(o.isLight)lightsBefore.push(o);});const stats=bakeForestShadows(renderer,scene,sun,visibility);assert.equal(renders,1);assert.equal(currentTarget,previousTarget);assert.equal(stats.updates,1);assert(stats.cached);assert.equal(stats.mapSize,4096);assert.equal(renderer.shadowMap.autoUpdate,false);assert.equal(sun.shadow.autoUpdate,false);assert.equal(renderer.shadowMap.needsUpdate,false);assert.equal(sun.shadow.needsUpdate,false);assert.equal(renderer.shadowMap.type,THREE.PCFSoftShadowMap);
-assert(stats.worldCoverage.minX<=-720&&stats.worldCoverage.maxX>=720&&stats.worldCoverage.minZ<=-720&&stats.worldCoverage.maxZ>=720,'Nested terrain tiles and the entire playable world are covered');
+const area=scene.userData.forestStream.loadedBounds;assert(stats.worldCoverage.minX<=area.minX&&stats.worldCoverage.maxX>=area.maxX&&stats.worldCoverage.minZ<=area.minZ&&stats.worldCoverage.maxZ>=area.maxZ&&area.maxX-area.minX>=320,'Every streamed chunk around the player is covered');
 for(const mesh of scene.children.filter(m=>/trunks|crowns|branches|knots|roots|boulders|pebbles/.test(m.name))){assert(mesh.castShadow,`${mesh.name} casts`);assert(mesh.receiveShadow,`${mesh.name} receives`);}
 const lightsAfter=[];scene.traverse(o=>{if(o.isLight)lightsAfter.push(o);});assert.deepEqual(lightsAfter,lightsBefore,'Reuse the existing sun');
 visibility.update(camera);assert(visibility.batches.some(b=>b.mesh.count<b.records.length),'Normal culling resumes after the cached bake');assert.equal(renders,1,'Camera updates do not rebuild shadows');

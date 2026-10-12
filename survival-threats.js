@@ -1,5 +1,5 @@
 import {nearbyObstacles} from './obstacle-grid.js';
-import {EnemyWaves} from './enemy-waves.js?v=hills-4-r1';
+import {EnemyWaves} from './enemy-waves.js?v=big-1';
 
 export class SurvivalThreats extends EnemyWaves {
  constructor(scene,obstacles,feel){super(scene,obstacles,feel,3);this.ready=this.ready.then(async()=>{while(this.pool.length<3)await this.addRig();this.reset();});}

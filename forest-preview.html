@@ -1,17 +1,16 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Forest scene preview</title></head><body style="margin:0"><script type="module">
 import * as THREE from './vendor/three.module.js';
-import {createForest} from './forest-scene.js?v=stones-2';
-import {loadNatureTrees} from './nature-trees.js?v=8';
+import {createForest} from './forest-scene.js?v=big-1';
+import {loadNatureTrees} from './nature-trees.js?v=big-1';
 import {loadDetailAtlases} from './detail-atlas.js';
-import {ForestVisibility} from './forest-visibility.js?v=stones-2';
-import {bakeForestShadows} from './cached-forest-shadows.js';
-import {terrainHeight} from './terrain.js';
+import {ForestVisibility} from './forest-visibility.js?v=big-1';
+import {bakeForestShadows} from './cached-forest-shadows.js?v=big-1';
+import {terrainHeight} from './terrain.js?v=big-1';
 const params=new URLSearchParams(location.search),x=Number(params.get('x')??0),z=Number(params.get('z')??8);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9cbdd0);scene.fog=new THREE.Fog(0x9cbdd0,35,90);
 const camera=new THREE.PerspectiveCamera(85,innerWidth/innerHeight,.05,900);camera.position.set(x,terrainHeight(x,z)+2.295,z);camera.rotation.order='YXZ';camera.rotation.set(Number(params.get('pitch')??-.06),Number(params.get('yaw')??0),0);
 scene.add(new THREE.HemisphereLight(0xd9edff,0x5d6240,1.2));const sun=new THREE.DirectionalLight(0xffe0ac,1.7);sun.position.set(-30,50,20);scene.add(sun);
 const models=await loadNatureTrees();createForest(scene,models);await loadDetailAtlases();
-for(const name of ['Faceted sky clouds','Distant mountain silhouettes'])scene.getObjectByName(name).visible=false;
 const visibility=new ForestVisibility(scene,{maxDistance:92}),renderer=new THREE.WebGLRenderer({antialias:false});renderer.setPixelRatio(1);renderer.setSize(innerWidth,innerHeight);document.body.appendChild(renderer.domElement);
 bakeForestShadows(renderer,scene,sun,visibility);visibility.update(camera);renderer.render(scene,camera);
 </script></body></html>

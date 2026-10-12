@@ -11,7 +11,7 @@ assert.equal(gridReference(a.attack.x,a.attack.z),'D1');assert.equal(a.grid,'C1'
 assert(Math.hypot(a.x-a.attack.x,a.z-a.attack.z)<60,'A short final approach from a recognisable trail bend');
 const local=obstacles.filter(o=>firstControlClearing(o.x,o.z));assert.equal(local.length,2,'Other random colliders cannot hide the landmark pair');
 for(const rock of [FIRST_CONTROL.north,FIRST_CONTROL.south])assert(local.some(o=>Math.abs(o.x-rock.x)<.01&&Math.abs(o.z-rock.z)<.01));
-const rocks=scene.getObjectByName('Large faceted boulders'),matrix=new THREE.Matrix4();let found=0;
+scene.userData.forestStream.loadAround(a.x,a.z);const rocks=scene.getObjectByName('Large faceted boulders'),matrix=new THREE.Matrix4();let found=0;
 for(let i=0;i<rocks.count;i++){rocks.getMatrixAt(i,matrix);for(const rock of [FIRST_CONTROL.north,FIRST_CONTROL.south])if(Math.abs(matrix.elements[12]-rock.x)<.01&&Math.abs(matrix.elements[14]-rock.z)<.01)found++;}assert.equal(found,2,'Both landmark rocks use the existing instanced batch');
 const player={x:a.attack.x,z:a.attack.z,y:terrainHeight(a.attack.x,a.attack.z),vx:0,vz:0,radius:.3,grounded:true,groundHeight:terrainHeight};assert.equal(exercise.interact(player),false);
 player.x=FIRST_CONTROL.south.x+4.7;player.z=FIRST_CONTROL.south.z;player.y=terrainHeight(player.x,player.z);assert.equal(exercise.interact(player),false,'The southern boulder is not the control');

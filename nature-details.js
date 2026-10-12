@@ -1,8 +1,8 @@
-import {stonePathSites,drapeStoneMaterial,trimStoneUndersides} from './stone-path.js?v=1-r1';
+import {stonePathSites,drapeStoneMaterial,trimStoneUndersides} from './stone-path.js?v=big-1';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
-import {terrainHeight,terrainNormal,riverClearance} from './terrain.js?v=river-1';
-import {trails,trailClearance} from './landmark-routes.js';
+import {terrainHeight,terrainNormal,riverClearance} from './terrain.js?v=big-1';
+import {trails,trailClearance} from './landmark-routes.js?v=big-1';
 export async function loadNatureDetails(){
  const names=await (await fetch(new URL('./assets/nature-details/manifest.json',import.meta.url))).json(),loader=new GLTFLoader(),models=new Map(),textures=new Map();
  for(const name of names){const {scene}=await loader.loadAsync(new URL(`./assets/nature-details/${name}.gltf`,import.meta.url).href);scene.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(scene),size=b.getSize(new THREE.Vector3()),width=Math.max(size.x,size.z),center=b.getCenter(new THREE.Vector3()),parts=[];

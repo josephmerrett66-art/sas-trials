@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {rivers} from './terrain.js?v=river-1';
+import {rivers} from './terrain.js?v=big-1';
 import {tileTerrain} from './terrain-tiles.js';
 
 // One level water ribbon per channel at the river's surface height. It is wider than the

@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import {AnimatedEnemy} from './animated-enemy.js?v=hills-4?v=waves-1-r1';
-import {collideForest} from './forest.js?v=gullies-1-r1';
+import {AnimatedEnemy} from './animated-enemy.js?v=big-1';
+import {collideForest} from './forest.js?v=big-1';
 
 // Reuse a bounded rig pool; later waves feed additional enemies as slots open.
 export class EnemyWaves {

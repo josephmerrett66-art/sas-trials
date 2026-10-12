@@ -1,3 +1,23 @@
+# Big map and fieldcraft
+
+The map is now 3.2 × 3.2 km (about 4.9 times the old 1.44 km map's area), so legs between posts take real time and a journey usually spans a night. Posts, trails, landmarks and the two river systems were laid out on the old map and scaled up with it (`world-size.js`).
+
+**Day and night.** A running clock (`daycycle.js`): one real second is one game minute, the start is 09:00, sunrise is about 05:00 and sunset about 21:00. Light, fog and sky follow the sun continuously, and the torch is only worth carrying after dark. The settings can hold it at day or night instead.
+
+**Survival loop.** Warmth and sleep are now core stats alongside food and water:
+- Warmth drains in the dark, in rain and when soaked from wading, and recovers in sunshine and beside a fire. Too long at zero and you are withdrawn for hypothermia.
+- Fatigue counts hours awake. Past 16 hours you slow down; past 26 you are withdrawn for exhaustion.
+- G (context action): gather dead wood from big trees, stoke the fire, check a snare, refill water, or throw a stick at a rabbit in front of you.
+- F: light a fire (firesteel and 2 bundles of wood), or cook raw meat and boil water at a lit fire.
+- Z: sleep from 19:30 until dawn, beside a fire or in a bedroll. A fire that dies in the night wakes you cold.
+- N: set a snare. Most catch a rabbit within a few hours; come back for it.
+- Rabbits come out most at dawn and dusk. Creep up crouched; running scares them off.
+- On a phone, all of these are on the KIT sheet.
+
+**Streaming forest.** The whole layout (trees, rocks, stumps, logs, every collider) is generated once for the whole map, but only drawn near you. `forest-scene.js` builds 160 m chunks within 170 m of the player, spreading each chunk over many frames (at most about 2.5 ms of work per frame) and dropping chunks beyond 260 m. All chunks feed the same pooled instanced batches, so the draw-call count does not grow with the map. The cached sun shadow map is re-baked for the loaded area when the set of chunks changes, rather than covering the whole map once. River tiles are now distance-culled like the ground.
+
+Checks: all node tests pass (tests were updated for streaming, two main rivers and the larger map). Browser checks: loading, walking 240 m with chunks streaming in, teleporting to post A and to a spring, and the camp loop (wood, fire, snare, sleep, catch). Compared with the previous commit in software rendering: the benchmark page finished loading and running in 51 s instead of 62 s; draw calls at the start view fell from 66 to 26 with about the same triangle count; a shadow re-bake takes about 12 to 30 ms of CPU after the first one. Frame times could not be measured in the cloud (software rendering), so 60 FPS on the development Mac is not yet confirmed; a brief hitch when a shadow re-bake happens is possible.
+
 # River network
 
 One river crosses the map from the east edge to the south-west corner, joined by six streams (about 4.8 km of water in all). It is worked out once from the terrain when the game loads, in `hydrology.js`:
