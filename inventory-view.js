@@ -1,4 +1,4 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=camp-1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=vitals-1';
 
 // Touch only: keyboard and Xbox players already have V, B and G. One button opens a small
 // paper sheet with the bergen's contents and the actions that need a key elsewhere.

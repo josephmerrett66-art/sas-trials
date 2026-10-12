@@ -1,12 +1,15 @@
 export const defaults = {walk:6,sprint:9.5,acceleration:45,braking:42,directionGrip:12,airControl:8,jump:1.2,sensitivity:0.002,fov:65,stickSensitivity:5,stickCurve:1.6,adsSensitivity:.55,deadzone:.08,juice:1.5,armMotion:1,size:1.35,footstepVolume:.35};
 export class Controller {
   constructor(groundHeight=null,boundary=Infinity){this.groundHeight=groundHeight;this.boundary=boundary;this.config={...defaults};this.pace=1;this.reset();}
-  reset(){this.x=0;this.z=8;this.y=0;this.vx=0;this.vz=0;this.vy=0;this.yaw=0;this.pitch=0;this.grounded=true;this.slide=0;this.eye=1.7*this.config.size;this.travel=0;this.jumpBuffer=0;this.time=0;this.lastGround=0;this.wasCrouch=false;this.state='GROUNDED';}
+  reset(){this.x=0;this.z=8;this.y=0;this.vx=0;this.vz=0;this.vy=0;this.yaw=0;this.pitch=0;this.grounded=true;this.slide=0;this.eye=1.7*this.config.size;this.travel=0;this.jumpBuffer=0;this.time=0;this.lastGround=0;this.wasCrouch=false;this.state='GROUNDED';this.stamina=100;this.winded=false;}
   get radius(){return .3*this.config.size;}
   setSize(size){const next=Math.min(2.2,Math.max(.7,size));this.eye*=next/this.config.size;this.config.size=next;}
   step(dt,keys,autoJump=false,analog=null){
     this.time+=dt;
-    const crouch=keys.has('KeyC'), sprint=keys.has('ShiftLeft')||keys.has('ShiftRight');
+    const crouch=keys.has('KeyC'),wantSprint=keys.has('ShiftLeft')||keys.has('ShiftRight');
+    // Stamina: about 14 s of sprinting from full. Run it flat and you are winded until it is back to a third.
+    if(this.stamina<=0)this.winded=true;else if(this.stamina>=35)this.winded=false;
+    const sprint=wantSprint&&!this.winded;
     if(this.grounded)this.lastGround=this.time;
     const speed=Math.hypot(this.vx,this.vz);
     if(crouch&&!this.wasCrouch&&this.grounded&&speed>7){this.slide=.75;this.vx*=1.15;this.vz*=1.15;}
@@ -37,6 +40,7 @@ export class Controller {
     if(this.grounded){this.y=ground;this.vy=0;}else{this.vy-=24*dt;this.y+=this.vy*dt;if(this.y<=ground){this.y=ground;this.vy=0;this.grounded=true;}}
     this.travel+=Math.hypot(this.vx,this.vz)*dt;
     this.eye+=((crouch||this.slide>0?1.05:1.7)*this.config.size-this.eye)*(1-Math.exp(-18*dt));
+    const sprinting=sprint&&forward>0&&speed>.1&&this.grounded;this.stamina=Math.max(0,Math.min(100,this.stamina+(sprinting?-7:speed>.1?10:16)*dt));
     this.state=!this.grounded?'AIRBORNE':this.slide>0?'SLIDING':crouch?'CROUCHED':speed>.1?(sprint&&forward>0?'SPRINTING':'MOVING'):'GROUNDED';
   }
 }

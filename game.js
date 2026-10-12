@@ -8,7 +8,7 @@ import {mainTrail} from './landmark-routes.js?v=big-1';
 import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE,rivers,riverAt} from './terrain.js?v=big-1';
 import {ValleyRiver} from './river.js?v=big-1';
-import {Controller,defaults} from './controller.js?v=kit-1';
+import {Controller,defaults} from './controller.js?v=vitals-1';
 import {GamepadInput} from './gamepad.js?v=camp-1';
 import {createForest,collideForest} from './forest.js?v=big-1';
 import {MovementFeel,LookSway} from './feel.js?v=recorded-audio-1';
@@ -22,14 +22,15 @@ import {ForestTorch,installTorchOptics} from './torch.js?v=daycycle-1';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=big-1';
 import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=big-1';
 import {HeldNavigation} from './held-navigation.js?v=baseplate-1';
-import {FieldKit} from './kit.js?v=camp-1';
+import {FieldKit} from './kit.js?v=vitals-1';
 import {findSprings,addSprings,nearbySpring,updateSpringVisibility} from './springs.js?v=big-1';
-import {PackingView} from './packing-view.js?v=camp-1';
-import {InventoryView} from './inventory-view.js?v=camp-1';
+import {PackingView} from './packing-view.js?v=vitals-1';
+import {InventoryView} from './inventory-view.js?v=vitals-1';
 import {DayClock,formatClock} from './daycycle.js?v=1';
 import {Camp} from './camp.js?v=big-1';
 import {Wildlife} from './wildlife.js?v=big-1';
 import {nearbyObstacles} from './obstacle-grid.js';
+import {VitalsHud} from './vitals-hud.js?v=1';
 
 const params=new URLSearchParams(location.search),benchmark=params.has('benchmark'),benchmarkLandmark=benchmark&&/^[B-H]$/.test(params.get('landmark')??'');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9cbdd0);scene.fog=new THREE.Fog(0x9cbdd0,35,90);
@@ -69,7 +70,7 @@ function setTimeMode(mode,persist=true){clock.setMode(mode);timeSetting.value=mo
 let timeMode='cycle';try{timeMode=localStorage.getItem('navigation-time')??(localStorage.getItem('navigation-night')==='true'?'night':'cycle');}catch{}
 const lighting=params.get('lighting');setTimeMode(['cycle','day','night'].includes(lighting)?lighting:benchmark?'day':['cycle','day','night'].includes(timeMode)?timeMode:'cycle',false);syncTorch();
 const forestShadowStats=bakeForestShadows(renderer,scene,sunlight,forestVisibility);sunlight.castShadow=clock.mode!=='night';let torchShown=null;
-const forestLife=new ForestLife(scene);
+const forestLife=new ForestLife(scene);const vitals=new VitalsHud();
 timeSetting.onchange=()=>setTimeMode(timeSetting.value);torchButton.onclick=()=>{torch.toggle();syncTorch();};
 function resetRun(){kit.reset();clock.reset();camp.reset();wildlife.reset();gathered.clear();duskWarned=-1;player.pace=1;packing?.update(false);play.firstChild.textContent='BEGIN EXERCISE ';player.reset();player.x=START.x;player.z=START.z;player.y=terrainHeight(player.x,player.z);feel.reset();lookSway.reset();lean.reset();exercise.reset();view.reset();lastY=player.y;keys.clear();accumulator=0;view.toggle('assignment');}
 let packing=null,duskWarned=-1;const gathered=new Set();resetRun();view.close();
@@ -165,7 +166,7 @@ renderer.setAnimationLoop(now=>{
   if(clock.mode==='cycle'&&clock.hour>=19.5&&clock.hour<20&&duskWarned!==clock.day){duskWarned=clock.day;say('Dusk is coming. Gather wood and make camp.');}player.pace=kit.pace*(1-.45*Math.min(1,depth/.9));if(kit.withdrawn){pause();play.firstChild.textContent='REPACK AND RESTART ';}}else {player.vx=player.vz=0;feel.step(0,player,player.config.juice);exercise.messageTime=Math.max(0,exercise.messageTime-dt);}
  const physicsEnd=performance.now(),motion=feel.output,lookMotion=lookSway.step(dt,active&&!view.blocking?(pad?.look.x??0):0,active&&!view.blocking?(pad?.look.y??0):0,player.config.juice,0),leanMotion=lean.step(dt,active&&!view.blocking?leanInput(keys,pad):0,player,obstacles);
  camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);heldNavigation.update(player,active&&!view.blocking?dt:0,feel,active);torch.setDark(clock.darkness);torch.step(active?dt:0,player);{const show=clock.darkness>.35;if(show!==torchShown){torchShown=show;torchButton.hidden=!show;}}camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,clock.darkness,torch.on,sunlight,hemisphere,forestVisibility,clock.dusk);river.step(dt);camp.step(active?dt:0,clock.hours,{dark:clock.darkness,rain:weather.state.rain,camera,range:scene.fog.far});wildlife.step(dt,player,{activity:Math.min(1,.3+.3*clock.daylight+.5*clock.dusk),active:active&&!view.blocking&&kit.packed});if(sleepTime>0){sleepTime-=dt;if(sleepTime<=0)sleepFade.hidden=true;}soundscape.step(dt,weather.state.rain,weather.volume);forestLife.step(dt,active&&!view.blocking,camera,weather.state,torch.dark);
- frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);if(!view.prompt.textContent)view.prompt.textContent=fieldPrompt();view.refreshNotes();packing.update(active);inventory.render();hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
+ frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);if(!view.prompt.textContent)view.prompt.textContent=fieldPrompt();view.refreshNotes();vitals.update(kit.packed,kit,player);packing.update(active);inventory.render();hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
  const updateEnd=performance.now();for(const post of checkpointPosts){const dx=post.position.x-camera.position.x,dz=post.position.z-camera.position.z;post.visible=dx*dx+dz*dz<(scene.fog.far+4)**2;}updateSpringVisibility(springMeshes,springs,camera,scene.fog.far+4);// A jump of more than 40 m (restart, test teleport) loads the new area at once; walking streams it.
  if(Math.hypot(player.x-streamPosition.x,player.z-streamPosition.z)>40)forestStream.loadAround(player.x,player.z);else forestStream.update(player.x,player.z);streamPosition.x=player.x;streamPosition.z=player.z;
  if(forestStream.version!==forestStream.bakedVersion&&!forestStream.building&&sunlight.castShadow&&now-shadowBakeAt>1500){shadowBakeAt=now;bakeForestShadows(renderer,scene,sunlight,forestVisibility);}

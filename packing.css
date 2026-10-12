@@ -50,3 +50,14 @@ body.touch-mode.playing #kit-menu:not([hidden]){display:block}
 #sleep-fade p{font:500 22px 'Space Grotesk',sans-serif;color:#e9e6d9;letter-spacing:.5px;text-align:center;padding:0 24px}
 #sleep-fade.waking{animation:sleep-fade 3.2s ease-in-out}
 @keyframes sleep-fade{0%{opacity:0}20%{opacity:1}70%{opacity:1}100%{opacity:0}}
+/* Condition bars, bottom left. */
+#vitals{position:fixed;z-index:30;left:max(22px,env(safe-area-inset-left));bottom:calc(22px + env(safe-area-inset-bottom));width:168px;display:grid;gap:6px;padding:10px 12px;background:#18221bb8;border:1px solid #e1ecc22e;border-radius:6px;pointer-events:none;font:600 9px/1 'DM Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#d8e2c8}
+body:not(.playing) #vitals{display:none}
+.vital{display:grid;grid-template-columns:52px 1fr;align-items:center;gap:8px}
+.vital i{display:block;height:5px;background:#0d140f99;border-radius:3px;overflow:hidden}
+.vital b{display:block;height:100%;transform-origin:left;transform:scaleX(1);transition:transform .25s linear;border-radius:3px}
+[data-vital=health] b{background:#c56b52}[data-vital=stamina] b{background:#d9d4a6}[data-vital=food] b{background:#c9a24a}[data-vital=water] b{background:#6fa3c0}
+.vital.low span{color:#f0a184}.vital.low b{animation:vital-low 1.2s ease-in-out infinite}
+@keyframes vital-low{50%{opacity:.45}}
+body.touch-mode #vitals{bottom:calc(166px + env(safe-area-inset-bottom))}
+@media(max-height:500px){body.touch-mode #vitals{bottom:auto;top:calc(76px + env(safe-area-inset-top))}}

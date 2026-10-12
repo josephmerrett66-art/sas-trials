@@ -17,3 +17,13 @@ const slow=new Controller();run(slow,1,forward);run(slow,.2,idle);assert.equal(s
 const analog=new Controller();for(let i=0;i<120;i++)analog.step(1/120,idle,false,{x:.25,y:0});assert.ok(Math.abs(analog.vx-1.5)<1e-9,'gentle walking remains available');
 const jumper=new Controller();jumper.jumpBuffer=1;jumper.step(1/120,forward);assert.equal(jumper.grounded,false);assert.ok(jumper.vy>0,'jump still works');
 console.log('Passed fine stick precision, immediate release, full-speed turning, linear walking, stopping distance, reversals, directional grip and jumping.');
+{
+ // Sprint stamina: drains while sprinting, winds you at zero, and recovers when you ease off.
+ const {Controller}=await import('../controller.js');
+ const p=new Controller();const sprint=new Set(['KeyW','ShiftLeft']);
+ for(let i=0;i<120*5;i++)p.step(1/120,sprint);if(!(p.stamina<70&&p.stamina>55))throw new Error('stamina drains while sprinting: '+p.stamina);
+ for(let i=0;i<120*12;i++)p.step(1/120,sprint);if(!p.winded)throw new Error('winded after a long sprint');
+ const speed=Math.hypot(p.vx,p.vz);if(speed>p.config.walk*1.01)throw new Error('winded player cannot sprint: '+speed);
+ for(let i=0;i<120*3;i++)p.step(1/120,new Set());if(p.winded)throw new Error('recovers after resting');
+ console.log('Passed sprint stamina drain, winding and recovery.');
+}

@@ -1,3 +1,13 @@
+# Condition HUD
+
+Four slim bars sit in the bottom-left corner while you play: health, stamina, food and water. On a phone they move above the joystick, or to the top left in landscape.
+- Health is your overall condition. It stays full until water, food, warmth or sleep runs low, then falls with the worst of them.
+- Stamina is new: about 14 seconds of sprinting from full. Run it flat and you are winded, unable to sprint, until it recovers to a third. It refills faster standing still than walking.
+- Food and water are the existing energy and hydration stats.
+- A bar under a quarter pulses. The bars update ten times a second, only touch the page when a value changes, and animate with transforms only, so they add no rendering work to the 3D scene.
+
+Checks: all node tests pass, including a new stamina test in tests/movement.mjs (drain, winding, recovery). Browser-checked on desktop and a phone-sized landscape screen.
+
 # Big map and fieldcraft
 
 The map is now 3.2 × 3.2 km (about 4.9 times the old 1.44 km map's area), so legs between posts take real time and a journey usually spans a night. Posts, trails, landmarks and the two river systems were laid out on the old map and scaled up with it (`world-size.js`).

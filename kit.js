@@ -137,5 +137,7 @@ export class FieldKit {
  // Short pencilled notes for the held chart. Words, not gauges: changes only on band shifts.
  get notes(){const food=this.rations+this.cooked,state=[hydrationWord(this.hydration),energyWord(this.energy),warmthWord(this.warmth),fatigueWord(this.awake)].filter(w=>!['Good','Warm','Rested'].includes(w));if(this.sick>0)state.push('Unwell');return `${Math.round(this.weight)} kg · ${this.water.toFixed(1)} L · Food ${food}${this.raw?` +${this.raw} raw`:''} · Wood ${this.wood} · Snares ${this.snares} · ${state.length?state.join(' · '):'All good'}`;}
  // 0 when fine, rising to 1 as either need runs out. Drives the screen-edge vignette.
+ // Overall condition for the HUD: full until water, food, warmth or sleep runs low.
+ get health(){return Math.round(100*(1-Math.min(1,this.strain)));}
  get strain(){return Math.max(0,1-Math.min(this.hydration,this.energy,this.warmth)/30,(this.awake-21)/5);}
 }
