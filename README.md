@@ -1,3 +1,11 @@
+# Saved games
+
+A run is saved in the browser's local storage (`save-game.js`, key `sas-trials-save`), so closing the tab or browser does not lose it. It saves every 20 seconds while you play, when you pause, at each checkpoint you register, after sleeping, and when the page is hidden or closed. On the next visit the menu says CONTINUE EXERCISE with the saved time and next post.
+
+The save holds your condition (hydration, energy, warmth, sleep, wet, sickness), the bergen exactly as arranged, water carried, position and facing, stamina, the time of day, a lit fire and its fuel, set snares and when they catch, checkpoints reached, distance and climb, and which trees you have already taken wood from. Wildlife and weather start fresh. Reset exercise deletes the save, and so does withdrawing. Each browser and device keeps its own save; private windows may not keep it at all.
+
+Checks: tests/save-game.mjs round-trips a run through fake storage and covers bad saves and storage that refuses access. Browser-checked: pack a changed layout, walk, pause, reload, see CONTINUE with the saved time, continue, and reset.
+
 # Packing the bergen by hand
 
 The bergen is a 6 × 7 grid (`bergen-grid.js`), and everything you take is a block that has to fit: water bottles 1×2, ration packs 2×1, filter, fire steel and snare wire 1×1, stove 2×2, waterproof 3×2, sleeping bag 2×4. On the packing screen, drag kit from the list into the bergen, or tap it and tap a space. Turn the piece in hand with R, a right click or Turn. Drag a block out (or use −) to unpack it. Keyboard: Enter picks up, arrows move, Enter drops, Delete unpacks.

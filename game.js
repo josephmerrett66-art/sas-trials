@@ -31,6 +31,7 @@ import {Camp} from './camp.js?v=big-1';
 import {Wildlife} from './wildlife.js?v=big-1';
 import {nearbyObstacles} from './obstacle-grid.js';
 import {VitalsHud} from './vitals-hud.js?v=1';
+import {snapshot,restore,readSave,writeSave,clearSave} from './save-game.js?v=1';
 
 const params=new URLSearchParams(location.search),benchmark=params.has('benchmark'),benchmarkLandmark=benchmark&&/^[B-H]$/.test(params.get('landmark')??'');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9cbdd0);scene.fog=new THREE.Fog(0x9cbdd0,35,90);
@@ -72,10 +73,16 @@ const lighting=params.get('lighting');setTimeMode(['cycle','day','night'].includ
 const forestShadowStats=bakeForestShadows(renderer,scene,sunlight,forestVisibility);sunlight.castShadow=clock.mode!=='night';let torchShown=null;
 const forestLife=new ForestLife(scene);const vitals=new VitalsHud();
 timeSetting.onchange=()=>setTimeMode(timeSetting.value);torchButton.onclick=()=>{torch.toggle();syncTorch();};
-function resetRun(){kit.reset();clock.reset();camp.reset();wildlife.reset();gathered.clear();duskWarned=-1;player.pace=1;packing?.update(false);play.firstChild.textContent='BEGIN EXERCISE ';player.reset();player.x=START.x;player.z=START.z;player.y=terrainHeight(player.x,player.z);feel.reset();lookSway.reset();lean.reset();exercise.reset();view.reset();lastY=player.y;keys.clear();accumulator=0;view.toggle('assignment');}
-let packing=null,duskWarned=-1;const gathered=new Set();resetRun();view.close();
+function resetRun(forget=true){if(forget){clearSave();if(savedNote){savedNote='';hint.textContent=touch?.enabled?'Left joystick: move · Drag the scene: look · Tap Jump and hold Run':'Mouse + keyboard or Xbox controller';}}kit.reset();clock.reset();camp.reset();wildlife.reset();gathered.clear();duskWarned=-1;player.pace=1;packing?.update(false);play.firstChild.textContent='BEGIN EXERCISE ';player.reset();player.x=START.x;player.z=START.z;player.y=terrainHeight(player.x,player.z);feel.reset();lookSway.reset();lean.reset();exercise.reset();view.reset();lastY=player.y;keys.clear();accumulator=0;view.toggle('assignment');}
+let packing=null,duskWarned=-1,savedNote='';const gathered=new Set();const savedRun=benchmark||params.has('navtest')?null:readSave();resetRun(false);view.close();
+// Saved runs: the browser keeps one exercise in progress. It is written every 20 s of play,
+// on pause, after sleeping and when the tab is hidden or closed; Reset exercise deletes it.
+const saving=!benchmark&&!params.has('navtest');let saveTimer=0;
+function saveGame(){if(!saving)return;if(kit.withdrawn){clearSave();return;}if(!kit.packed)return;writeSave(snapshot({kit,player,clock,camp,exercise,gathered,obstacles}));}
+if(savedRun&&restore(savedRun,{kit,player,clock,camp,exercise,gathered,obstacles,groundHeight:terrainHeight})){player.pace=kit.pace;lastY=player.y;forestStream.loadAround(player.x,player.z);started=true;view.drawMap();view.update(player);play.firstChild.textContent='CONTINUE EXERCISE ';savedNote=`Saved run · ${clock.label} · ${exercise.complete?'circuit complete':`next post ${exercise.current.code}`}`;hint.textContent=savedNote;}
+addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame();});
 function setActive(value){touch?.reset();active=value;soundscape.setActive(value);document.body.classList.toggle('playing',value);keys.clear();player.jumpBuffer=0;accumulator=0;if(value){feel.unlockAudio();if(!started){started=true;if(view.panel!=='assignment')view.toggle('assignment');}}play.firstChild.textContent='RESUME EXERCISE ';}
-function pause(){inventory?.hide();setActive(false);if(locked)document.exitPointerLock();}
+function pause(){inventory?.hide();saveGame();setActive(false);if(locked)document.exitPointerLock();}
 // The backpack frees the mouse without pausing: the world (and the clock) keeps going.
 function openBag(){if(!active||!kit.packed||inventory.open)return;keys.clear();inventory.show();if(locked)document.exitPointerLock();}
 function closeBag(){if(active&&!controllerMode&&!touch?.enabled&&!locked)renderer.domElement.requestPointerLock()?.catch?.(()=>{});}
@@ -118,7 +125,7 @@ function fire(){
  lightFire();
 }
 // Single actions, shared by the keys and the backpack.
-function registerPost(){if(exercise.complete||!exercise.nearby(player))return false;if(exercise.interact(player))view.update(player);return true;}
+function registerPost(){if(exercise.complete||!exercise.nearby(player))return false;if(exercise.interact(player)){view.update(player);saveGame();}return true;}
 function liftSnare(){const snare=camp.nearSnare(player);if(!snare||!kit.packed)return;if(!kit.roomFor(clock.hours>=snare.catchAt?['snares','raw']:['snares'])){say('No room in your bergen. Rearrange it (Tab) or eat or burn something first.');return;}kit.recoverSnare(camp.checkSnare(snare,clock.hours));say(kit.message);view.drawMap();}
 function stokeFire(){if(!kit.packed||!camp.lit||!camp.near(player))return;camp.fire.fuel=kit.stokeFire(camp.fire.fuel);say(kit.message);}
 function fill(){if(!kit.packed)return;if(!nearWater()){say('No water within reach. Find a spring, stream or river.');return;}kit.refill();say(kit.message);}
@@ -136,7 +143,7 @@ function sleep(){
  if(!kit.packed)return;
  if(clock.mode==='cycle'&&!clock.sleepable){say(`Too light to sleep (${formatClock(clock.hours).slice(-5)}). Make camp from dusk, after 19:30.`);return;}
  const fireHours=camp.lit&&camp.near(player)?camp.fire.fuel:0,slept=kit.sleep(clock.mode==='cycle'?clock.untilWake():8,{fire:fireHours,rain:weather.state.rain});
- if(slept>0){clock.advance(slept);camp.burn(slept,weather.state.rain);sleepFade.querySelector('p').textContent=`${clock.label} · ${kit.message}`;sleepFade.hidden=false;sleepFade.classList.remove('waking');void sleepFade.offsetWidth;sleepFade.classList.add('waking');sleepTime=3.2;view.drawMap();}
+ if(slept>0){clock.advance(slept);camp.burn(slept,weather.state.rain);sleepFade.querySelector('p').textContent=`${clock.label} · ${kit.message}`;sleepFade.hidden=false;sleepFade.classList.remove('waking');void sleepFade.offsetWidth;sleepFade.classList.add('waking');sleepTime=3.2;view.drawMap();saveGame();}
  say(kit.message);
 }
 // Context hint under the crosshair, refreshed with the HUD.
@@ -159,7 +166,7 @@ document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListene
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);});
 touch=createTouchControls(renderer.domElement,{enabled:matchMedia('(any-pointer: coarse)').matches||params.has('touch'),canMove:()=>active&&!view.blocking&&!inventory?.open,look:(x,y)=>{player.yaw-=x*.004;player.pitch=THREE.MathUtils.clamp(player.pitch-y*.004,-Math.PI/2+.01,Math.PI/2-.01);},jump:()=>player.jumpBuffer=player.time+.12,pause});
 inventory=new InventoryView(kit,{enabled:touch.enabled,near:()=>({water:nearWater(),wet:nearRiver(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable}),actions:{drink,'eat-ration':()=>eat('ration'),'eat-cooked':()=>eat('cooked'),'eat-raw':()=>eat('raw'),fill,register:registerPost,gather:gatherWood,light:lightFire,stoke:stokeFire,cook:cookFood,snare,lift:liftSnare,throw:throwStick,sleep},onClose:closeBag});
-if(touch.enabled)hint.textContent='Left joystick: move · Drag the scene: look · Tap Jump and hold Run';
+if(touch.enabled)hint.textContent=(savedNote?savedNote+' · ':'')+'Left joystick: move · Drag the scene: look · Tap Jump and hold Run';
 const graphics=renderer.getContext(),gpuTimer=new GpuTimer(graphics),adapterExtension=graphics.getExtension('WEBGL_debug_renderer_info'),adapter=adapterExtension?graphics.getParameter(adapterExtension.UNMASKED_RENDERER_WEBGL):graphics.getParameter(graphics.RENDERER),frameMonitor=new FrameMonitor();
 let benchmarkStart=0,benchmarkDone=false,benchmarkWarm=false,benchmarkProbe=false,benchmarkResult=null;
 const benchmarkOutput=document.createElement('output');benchmarkOutput.id='performance-results';benchmarkOutput.hidden=!benchmark;
@@ -186,7 +193,7 @@ renderer.setAnimationLoop(now=>{
   if(clock.mode==='cycle'&&clock.hour>=19.5&&clock.hour<20&&duskWarned!==clock.day){duskWarned=clock.day;say('Dusk is coming. Gather wood and make camp.');}player.pace=kit.pace*(1-.45*Math.min(1,depth/.9));if(kit.withdrawn){pause();play.firstChild.textContent='REPACK AND RESTART ';}}else {player.vx=player.vz=0;feel.step(0,player,player.config.juice);exercise.messageTime=Math.max(0,exercise.messageTime-dt);}
  const physicsEnd=performance.now(),motion=feel.output,lookMotion=lookSway.step(dt,active&&!view.blocking?(pad?.look.x??0):0,active&&!view.blocking?(pad?.look.y??0):0,player.config.juice,0),leanMotion=lean.step(dt,active&&!view.blocking?leanInput(keys,pad):0,player,obstacles);
  camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);heldNavigation.update(player,active&&!view.blocking?dt:0,feel,active);torch.setDark(clock.darkness);torch.step(active?dt:0,player);{const show=clock.darkness>.35;if(show!==torchShown){torchShown=show;torchButton.hidden=!show;}}camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,clock.darkness,torch.on,sunlight,hemisphere,forestVisibility,clock.dusk);river.step(dt);camp.step(active?dt:0,clock.hours,{dark:clock.darkness,rain:weather.state.rain,camera,range:scene.fog.far});wildlife.step(dt,player,{activity:Math.min(1,.3+.3*clock.daylight+.5*clock.dusk),active:active&&!view.blocking&&kit.packed});if(sleepTime>0){sleepTime-=dt;if(sleepTime<=0)sleepFade.hidden=true;}soundscape.step(dt,weather.state.rain,weather.volume);forestLife.step(dt,active&&!view.blocking,camera,weather.state,torch.dark);
- frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);if(!view.prompt.textContent)view.prompt.textContent=fieldPrompt();view.refreshNotes();vitals.update(kit.packed,kit,player);packing.update(active);inventory.render();hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
+ frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);if(!view.prompt.textContent)view.prompt.textContent=fieldPrompt();view.refreshNotes();vitals.update(kit.packed,kit,player);if(active&&(saveTimer+=.1)>=20){saveTimer=0;saveGame();}packing.update(active);inventory.render();hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
  const updateEnd=performance.now();for(const post of checkpointPosts){const dx=post.position.x-camera.position.x,dz=post.position.z-camera.position.z;post.visible=dx*dx+dz*dz<(scene.fog.far+4)**2;}updateSpringVisibility(springMeshes,springs,camera,scene.fog.far+4);// A jump of more than 40 m (restart, test teleport) loads the new area at once; walking streams it.
  if(Math.hypot(player.x-streamPosition.x,player.z-streamPosition.z)>40)forestStream.loadAround(player.x,player.z);else forestStream.update(player.x,player.z);streamPosition.x=player.x;streamPosition.z=player.z;
  if(forestStream.version!==forestStream.bakedVersion&&!forestStream.building&&sunlight.castShadow&&now-shadowBakeAt>1500){shadowBakeAt=now;bakeForestShadows(renderer,scene,sunlight,forestVisibility);}
