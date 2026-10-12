@@ -1,0 +1,83 @@
+import assert from 'node:assert/strict';
+import * as THREE from '../vendor/three.module.js';
+import {DayClock,daylightAt,sunHeight,formatClock,START_HOUR} from '../daycycle.js';
+import {FieldKit,BURN_PER_WOOD,MAX_WOOD,TIRED_HOURS,SPENT_HOURS,warmthWord,fatigueWord} from '../kit.js';
+import {Camp,FIRE_REACH} from '../camp.js';
+import {Wildlife,RABBITS,THROW_RANGE} from '../wildlife.js';
+import {terrainHeight} from '../terrain.js';
+
+// Clock: one real second is one game minute; light follows the sun.
+const clock=new DayClock();assert.equal(clock.hour,START_HOUR);assert.equal(clock.label,'Day 1 · 09:00');
+clock.step(90);assert.equal(clock.label,'Day 1 · 10:30');
+assert.ok(daylightAt(13)===1&&daylightAt(1)===0,'bright midday, dark midnight');
+assert.ok(sunHeight(5)<.01&&sunHeight(21)<.01&&sunHeight(5)>-.01,'the sun sets at 21:00 and rises at 05:00');
+assert.ok(daylightAt(19)>.9&&daylightAt(22)<.1,'a long summer evening, then night');
+clock.hours=20;assert.ok(clock.dusk>.3,'warm light at sunset');clock.hours=13;assert.equal(clock.dusk,0);
+assert.equal(clock.sleepable,false);clock.hours=22;assert.equal(clock.sleepable,true);assert.equal(clock.untilWake(),7.5);
+clock.setMode('day');assert.equal(clock.daylight,1);clock.setMode('night');assert.equal(clock.darkness,1);clock.setMode('cycle');
+assert.equal(formatClock(24+6.25),'Day 2 · 06:15');clock.reset();assert.equal(clock.hours,START_HOUR);
+
+// Warmth: night and rain chill, a fire warms, wet clothes are worst.
+const hour=k=>{for(let i=0;i<60;i++)k();};
+const night=new FieldKit(),fireside=new FieldKit(),rain=new FieldKit(),jacket=new FieldKit(),soaked=new FieldKit();jacket.set('waterproof',1);
+for(const k of [night,fireside,rain,jacket,soaked])k.pack();
+hour(()=>{night.step(1,{effort:0,dark:1});fireside.step(1,{effort:0,dark:1,fire:true});rain.step(1,{effort:0,rain:1});jacket.step(1,{effort:0,rain:1});});
+soaked.step(1,{effort:0,soaked:true});hour(()=>soaked.step(1,{effort:0}));
+assert.ok(night.warmth<92&&night.warmth>90,'an hour of night costs about 9%');assert.equal(fireside.warmth,100,'a fire keeps you warm');
+assert.ok(jacket.warmth>rain.warmth,'a waterproof keeps out the rain');assert.ok(soaked.warmth<night.warmth,'wading soaks you');
+const sunny=new FieldKit();sunny.pack();sunny.warmth=50;hour(()=>sunny.step(1,{effort:1,sun:1}));assert.ok(sunny.warmth>55,'walking in the sun warms you up');
+assert.equal(warmthWord(80),'Warm');assert.equal(warmthWord(20),'Shivering');
+// Cold slows you, then ends the attempt.
+const cold=new FieldKit();cold.pack();const pace=cold.pace;cold.warmth=10;assert.ok(cold.pace<pace&&cold.strain>.5);
+cold.warmth=0;for(let i=0;i<61;i++)cold.step(1,{effort:0,hours:0});assert.equal(cold.withdrawn,'Hypothermia');
+
+// Fatigue: a long day is fine, a night without sleep is not.
+const awake=new FieldKit();awake.pack();assert.equal(fatigueWord(awake.awake),'Rested');
+awake.step(1,{hours:TIRED_HOURS});const tiredPace=awake.pace;assert.equal(fatigueWord(awake.awake),'Tired');
+const rested=new FieldKit();rested.pack();assert.ok(tiredPace<rested.pace,'tiredness slows you');
+awake.step(1,{hours:SPENT_HOURS-awake.awake});assert.equal(awake.withdrawn,'Exhaustion: no sleep');
+
+// Wood, fire and cooking.
+const camper=new FieldKit(()=>.99);camper.pack();assert.equal(camper.lightFire(),0,'no wood, no fire');
+for(let i=0;i<MAX_WOOD+2;i++)camper.gatherWood();assert.equal(camper.wood,MAX_WOOD,'wood carried is limited');
+const weight=camper.weight;assert.ok(weight>new FieldKit().weight,'wood weighs something');
+assert.equal(camper.lightFire(),2*BURN_PER_WOOD);assert.equal(camper.wood,MAX_WOOD-2);
+assert.equal(camper.stokeFire(1),1+BURN_PER_WOOD);assert.equal(camper.wood,MAX_WOOD-3);
+const nosteel=new FieldKit();nosteel.set('firesteel',0);nosteel.pack();nosteel.wood=4;assert.equal(nosteel.lightFire(),0,'a fire steel is needed');
+camper.catchRabbit();assert.equal(camper.raw,1);assert.equal(camper.cook(),true);assert.equal(camper.cooked,1);assert.equal(camper.raw,0);
+camper.energy=20;camper.eat();assert.equal(camper.energy,65,'cooked rabbit is eaten first');assert.equal(camper.rations,2);
+const raw=new FieldKit(()=>0);raw.set('rations',0);raw.pack();raw.raw=1;raw.energy=20;raw.eat();assert.equal(raw.energy,40);assert.ok(raw.sick>0,'raw meat can make you ill');
+const boil=new FieldKit();boil.set('stove',1);boil.set('filter',0);boil.pack();boil.water=0;boil.refill();assert.ok(boil.untreated>1);boil.cook();assert.equal(boil.untreated,0,'a mess tin boils water safe at a fire');
+// Snares.
+assert.equal(camper.snares,2);assert.equal(camper.setSnare(),true);assert.equal(camper.snares,1);camper.recoverSnare(true);assert.equal(camper.snares,2);assert.equal(camper.raw,1);
+
+// Sleep: needs a fire or a sleeping bag; a fire that dies leaves you cold.
+const sleeper=new FieldKit();sleeper.pack();sleeper.awake=18;assert.equal(sleeper.sleep(7.5),0,'too cold to sleep in the open');
+assert.equal(sleeper.sleep(7.5,{fire:8}),7.5);assert.equal(sleeper.awake,0);assert.equal(sleeper.warmth,100);assert.ok(sleeper.hydration<100);
+const short=new FieldKit();short.pack();short.sleep(7.5,{fire:3});assert.ok(short.warmth<60&&short.warmth>30,'the fire burned out');assert.match(short.message,/died/);
+const bag=new FieldKit();bag.set('bedroll',1);bag.pack();assert.equal(bag.sleep(7.5),7.5);assert.ok(bag.warmth>70,'a sleeping bag keeps you warm enough');
+const stormy=new FieldKit();stormy.pack();stormy.warmth=40;const slept=stormy.sleep(7.5,{fire:1,rain:1});assert.ok(slept<7.5,'cold wakes you early');assert.match(stormy.message,/shivering/);
+
+// Campfire and snares in the world: one reusable fire, bounded snares, few draws.
+const scene=new THREE.Scene(),camp=new Camp(scene);assert.equal(camp.group.visible,false);
+camp.light(40,-60,3);assert.ok(camp.lit);assert.equal(camp.fire.y,terrainHeight(40,-60));
+const player={x:40,z:-60+FIRE_REACH-.5};assert.ok(camp.warming(player));player.z+=1;assert.equal(camp.warming(player),false);
+const glow=camp.glow.geometry.attributes.position;for(let i=0;i<glow.count;i+=7)assert.ok(Math.abs(glow.getY(i)+camp.fire.y-terrainHeight(40+glow.getX(i),-60+glow.getZ(i))-.06)<1e-4,'the glow lies on the ground');
+camp.step(60,0,{rain:0});assert.ok(Math.abs(camp.fire.fuel-2)<1e-9,'a fire burns an hour of fuel each game hour');camp.burn(1,1);assert.ok(Math.abs(camp.fire.fuel-.5)<1e-9,'rain burns it faster');camp.burn(5);assert.equal(camp.lit,false);
+camp.setSnare(10,10,0,.1);camp.setSnare(20,20,0,.9);assert.equal(camp.snareMesh.count,2);
+const s=camp.nearSnare({x:10.5,z:10});assert.ok(s);camp.step(0,1,{});assert.equal(camp.caughtMesh.count,0);camp.step(0,3,{});assert.equal(camp.caughtMesh.count,1,'a caught rabbit shows in the snare');
+assert.equal(camp.checkSnare(s,3),true);assert.equal(camp.checkSnare(camp.nearSnare({x:20,z:20}),50),false,'some snares never catch');assert.equal(camp.snareMesh.count,0);
+const draws=[];scene.traverse(o=>{if(o.isMesh)draws.push(o.name||'fire part');});assert.ok(draws.length<=5,'campfire, snares and caught rabbits are a handful of draws');
+assert.equal(scene.children.filter(o=>o.isLight).length,0,'no extra lights');
+
+// Rabbits: bounded pool, flee when disturbed, crouching gets you closer.
+const life=new Wildlife(new THREE.Scene()),walker={x:-130,z:30,vx:2,vz:0,state:'MOVING'};
+for(let i=0;i<400;i++)life.step(.05,walker,{activity:1});const live=life.rabbits.filter(r=>r.active);
+assert.ok(live.length>=3&&live.length<=RABBITS,`rabbits come out (${live.length})`);assert.equal(life.mesh.count,live.length);
+for(const r of live){assert.ok(Math.abs(r.y-terrainHeight(r.x,r.z))<1e-6);assert.ok(Math.hypot(r.x-walker.x,r.z-walker.z)>8);}
+assert.ok(Wildlife.noticeRange({state:'CROUCHED'})<Wildlife.noticeRange({state:'MOVING',vx:3,vz:0}),'crouching lets you creep closer');
+const r=live[0];r.x=walker.x;r.z=walker.z-6;r.state='graze';const startD=6;for(let i=0;i<40;i++)life.step(.05,walker,{activity:1});assert.ok(Math.hypot(r.x-walker.x,r.z-walker.z)>startD+3,'a disturbed rabbit bolts');
+r.x=walker.x;r.z=walker.z-5;r.state='graze';assert.equal(life.target(walker,0,-1),r,'a rabbit straight ahead can be targeted');assert.equal(life.target(walker,1,0),null);
+assert.equal(life.throwAt(r,walker,0),true);assert.equal(r.active,false);
+const far=life.rabbits.find(q=>q.active)??life.rabbits[1];far.active=true;far.state='graze';far.x=walker.x;far.z=walker.z-THROW_RANGE+.5;assert.equal(life.throwAt(far,walker,.5),false,'long throws usually miss');assert.equal(far.state,'flee');
+console.log('Passed clock and light, warmth, fatigue, wood, fire, cooking, boiling, snares, sleep, campfire and snare meshes, and rabbit behaviour.');

@@ -12,9 +12,10 @@ export class ForestTorch {
   this.time=0;this.lagX=0;this.lagY=0;this.lastYaw=null;this.lastPitch=0;
  }
  toggle(){this.on=!this.on;return this.on;}
- setDark(value){this.dark=Boolean(value);this.darkness=this.dark?1:0;}
+ // darkness 0..1; the torch only throws light as daylight fades.
+ setDark(value){this.darkness=Math.max(0,Math.min(1,Number(value)));this.dark=this.darkness>.5;}
  step(dt,player){
-  dt=Math.min(.05,Math.max(0,dt));this.darkness=this.dark?1:0;this.time+=dt;
+  dt=Math.min(.05,Math.max(0,dt));this.time+=dt;
   this.level+=((this.on?1:0)-this.level)*(1-Math.exp(-35*dt));
   if(player&&typeof player==='object'){
    if(this.lastYaw!==null){
@@ -28,7 +29,7 @@ export class ForestTorch {
   const speed=player&&typeof player==='object'?Math.min(1,Math.hypot(player.vx,player.vz)/6):0;
   const stride=player&&typeof player==='object'?player.travel*2.6:0;
   this.target.position.set(this.lagX+Math.sin(stride)*.09*speed+Math.sin(this.time*1.3)*.018,-.45+this.lagY+Math.cos(stride*2)*.065*speed,-20);
-  this.light.intensity=this.level*(this.dark?210:0);return this.darkness;
+  this.light.intensity=this.level*210*Math.min(1,Math.max(0,(this.darkness-.25)/.6));return this.darkness;
  }
 }
 

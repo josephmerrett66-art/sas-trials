@@ -2,6 +2,7 @@ import {trails} from './landmark-routes.js?v=no-river-1';
 import * as THREE from './vendor/three.module.js';
 import {terrainHeight,WORLD_SIZE} from './terrain.js?v=river-1';
 import {START,gridReference,coordinates} from './navigation.js?v=irregular-route-1-r1';
+import {formatClock} from './daycycle.js?v=1';
 
 export function addCheckpointPosts(scene,points){
  const groups=[];
@@ -16,8 +17,8 @@ export function addCheckpointPosts(scene,points){
  return groups;
 }
 export class NavigationView {
- constructor(exercise,{springs=[],kit=null,rivers=[]}={}){
-  this.exercise=exercise;this.springs=springs;this.rivers=rivers;this.kit=kit;this.renderedNotes=null;this.panel=null;this.renderedStage=-1;
+ constructor(exercise,{springs=[],kit=null,rivers=[],clock=null,camp=null}={}){
+  this.exercise=exercise;this.springs=springs;this.rivers=rivers;this.clock=clock;this.camp=camp;this.kit=kit;this.renderedNotes=null;this.panel=null;this.renderedStage=-1;
   this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.chart=document.querySelector('#nav-chart');this.chart.width=800;this.chart.height=800;this.updateAssignment();
  }
@@ -29,7 +30,9 @@ export class NavigationView {
   const current=this.exercise.current;this.renderedStage=this.exercise.stage;this.drawMap();
   document.querySelector('#assignment-copy').innerHTML=current?`<span class="eyebrow">NAVIGATION EXERCISE ${String(this.exercise.stage+1).padStart(2,'0')}</span><h2>Checkpoint ${current.code}</h2><p class="grid-ref">Grid ${current.grid}</p><p class="coordinates">E ${coordinates(current).east} · N ${coordinates(current).north} m</p>${current.controlDescription?`<p><strong>Control: ${current.controlDescription}</strong></p>`:''}<p>${current.description}</p><p class="muted">Equipment: map and compass always in hand.<br>North is map north. Coordinates start at the south-west corner of the chart.<br>The next destination is revealed at this post. No time limit.</p><p>${this.exercise.stage} / ${this.exercise.checkpoints.length} checkpoints registered</p>`:'';
  }
- refreshNotes(){if((this.kit?.packed?this.kit.notes:null)!==this.renderedNotes)this.drawMap();}
+ // Time is pencilled to the quarter hour, so the chart redraws at most every 15 game minutes.
+ get notes(){if(!this.kit?.packed)return null;const c=this.clock,time=c?formatClock(Math.floor(c.hours*4)/4).replace('Day ','D')+' · ':'';return time+this.kit.notes;}
+ refreshNotes(){if(this.notes!==this.renderedNotes)this.drawMap();}
  update(player){
   if(this.renderedStage!==this.exercise.stage){this.updateAssignment();if(!this.exercise.complete){this.close();this.toggle('assignment');}}
   const near=this.exercise.nearby(player);this.prompt.textContent=near&&!this.exercise.complete?(this.exercise.checkpoints.indexOf(near)<this.exercise.stage?`Post ${near.code} · Reached`:`Post ${near.code} · G / Xbox X to register`):'';
@@ -55,8 +58,10 @@ export class NavigationView {
   mark(START,'START','#303b31');for(const p of this.exercise.revealed)mark(p,p.code,p===this.exercise.current?'#8e3e2d':'#52614d');
   ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m · Blue: water`,48,772);
   // Kit and condition, pencilled along the bottom margin.
-  this.renderedNotes=this.kit?.packed?this.kit.notes:null;if(this.renderedNotes){ctx.font='bold 14px monospace';ctx.fillStyle='#4a3c2a';ctx.fillText(this.renderedNotes,48,794);}
+  // Your own camp marks: the last fire and any snares you have set.
+  if(this.camp){ctx.lineWidth=3;if(this.camp.fire){ctx.beginPath();ctx.arc(px(this.camp.fire.x),pz(this.camp.fire.z),7,0,Math.PI*2);ctx.fillStyle='#c8642d';ctx.fill();ctx.strokeStyle='#4a3c2a';ctx.stroke();}ctx.strokeStyle='#4a3c2a';for(const s of this.camp.snares){const x=px(s.x),y=pz(s.z);ctx.beginPath();ctx.moveTo(x-6,y-6);ctx.lineTo(x+6,y+6);ctx.moveTo(x+6,y-6);ctx.lineTo(x-6,y+6);ctx.stroke();}}
+  this.renderedNotes=this.notes;if(this.renderedNotes){ctx.font='bold 14px monospace';const width=ctx.measureText(this.renderedNotes).width;if(width>704)ctx.font=`bold ${Math.floor(14*704/width)}px monospace`;ctx.fillStyle='#4a3c2a';ctx.fillText(this.renderedNotes,48,794);}
   this.chart.dispatchEvent(new Event('chart-updated'));
-  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Blue lines: river and streams · Blue dots: springs · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
+  document.querySelector('#map-legend').textContent=`Fixed north-up chart · Start ${gridReference(START.x,START.z)} · Brown line: stone path · Blue lines: river and streams · Blue dots: springs · Orange dot: your fire · Crosses: your snares · Darker green: higher ground. Only visited posts and the current destination are marked. Future destinations are sealed. No live position is shown.`;
  }
 }
