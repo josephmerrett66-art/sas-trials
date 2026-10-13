@@ -1,7 +1,7 @@
 import {stonePathSites,drapeStoneMaterial,trimStoneUndersides} from './stone-path.js?v=big-1';
 import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
-import {terrainHeight,terrainNormal,riverClearance} from './terrain.js?v=big-1';
+import {terrainHeight,terrainNormal,riverClearance} from './terrain.js?v=valleys-1';
 import {trails,trailClearance} from './landmark-routes.js?v=big-1';
 export async function loadNatureDetails(){
  const names=await (await fetch(new URL('./assets/nature-details/manifest.json',import.meta.url))).json(),loader=new GLTFLoader(),models=new Map(),textures=new Map();

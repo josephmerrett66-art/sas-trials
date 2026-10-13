@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight,riverClearance,WORLD_SIZE} from './terrain.js?v=big-1';
+import {terrainHeight,riverClearance,WORLD_SIZE} from './terrain.js?v=valleys-1';
 
 const tint=(geometry,color)=>{geometry=geometry.index?geometry.toNonIndexed():geometry;for(const k of Object.keys(geometry.attributes))if(k!=='position')geometry.deleteAttribute(k);const c=new THREE.Color(color),n=geometry.attributes.position.count,colors=new Float32Array(n*3);for(let i=0;i<n;i++)c.toArray(colors,i*3);geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));return geometry;};
 const shape=(geometry,color,[x,y,z],[sx,sy,sz],[rx,ry,rz]=[0,0,0])=>{const o=new THREE.Object3D();o.position.set(x,y,z);o.rotation.set(rx,ry,rz);o.scale.set(sx,sy,sz);o.updateMatrix();return tint(geometry,color).applyMatrix4(o.matrix);};

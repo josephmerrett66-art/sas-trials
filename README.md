@@ -1,3 +1,22 @@
+# Natural valleys: no more cliffs between rivers
+
+The terrain had banks of 45° to 56° in a few places that looked like cliffs. There were three causes, and each is fixed:
+
+- **The start clearing** was levelled to height 0 on a hillside that sits about 15 m higher, which left a 20 m bank right beside the trail. The clearing is now levelled at the hillside's own height and eased into the slope over 80 m. The map is offset so the clearing is still at 0.
+- **Streams ran alongside the big river** 40 m away and 10 m higher, with a cliff between them. A stream now joins the water it approaches as soon as it comes within 70 m. While it runs within 180 m of other water, it sits low enough that the ground between them is a valley side no steeper than about 15°.
+- **Steps in stream levels** of 7 m over 50 m were copied into the valley sides wherever a stream bent back on itself. No reach now falls faster than 5%, so a stream cuts back into its own valley instead. Where two valleys meet, their sides now blend smoothly instead of the nearest river winning outright, which used to leave a step along the seam.
+
+Measured over the whole 3.2 km map on a 5 m grid:
+
+| Slope | Before | After |
+|---|---|---|
+| 35° to 45° | 239 cells | 63 cells |
+| 45° or more | 180 cells | 0 |
+
+Every slope over 35° that remains is natural hillside away from the water, with no river nearby. Screenshots looking east from the start: `artifacts/valleys-start-before.png` and `artifacts/valleys-start-after.png`. There are 15 rivers and streams instead of 17, because two short streams now join the river instead of running beside it.
+
+Checks: all node tests pass. The forest has 119,553 trees instead of 119,049, because the ground moved, and the layout test was updated to match. The `?benchmark=1&weapon=1` stress test shows the same 32 draw calls and the same CPU time (3.19 ms against 3.12 ms). Frame time in the software renderer here was 144 ms against 129 ms, which is within its run-to-run noise. 60 FPS is still not confirmed on the dev Mac. Results are in `artifacts/valleys-benchmark.json` and `artifacts/valleys-benchmark-base.json`.
+
 # Condition bars always on screen
 
 The health, stamina, food and water bars in the bottom-left corner now stay on screen the whole time you play. Before, they faded out whenever every bar was above 60, so at the start of a run they were invisible. Bars under 25 still turn red. Screenshot: `artifacts/vitals-always-on.png`.

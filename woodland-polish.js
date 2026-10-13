@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {trails,trailClearance} from './landmark-routes.js?v=big-1';
-import {WORLD_SIZE,riverClearance} from './terrain.js?v=big-1';
+import {WORLD_SIZE,riverClearance} from './terrain.js?v=valleys-1';
 
 function triangles(positions,colors=null){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));if(colors)geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.computeVertexNormals();return geometry;}
 function merge(core,detail){const base=core.index?core.toNonIndexed():core;base.deleteAttribute('uv');const result=mergeGeometries([base,detail]);if(base!==core)base.dispose();core.dispose();detail.dispose();result.computeBoundingSphere();return result;}

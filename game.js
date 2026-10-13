@@ -6,7 +6,7 @@ import {RecordedAudio} from './recorded-audio.js?v=1';
 import {ForestWeather} from './weather.js?v=daycycle-1';
 import {mainTrail} from './landmark-routes.js?v=big-1';
 import * as THREE from './vendor/three.module.js';
-import {terrainHeight,WORLD_SIZE,rivers,riverAt} from './terrain.js?v=big-1';
+import {terrainHeight,WORLD_SIZE,rivers,riverAt} from './terrain.js?v=valleys-1';
 import {ValleyRiver} from './river.js?v=big-1';
 import {Controller,defaults} from './controller.js?v=vitals-1';
 import {GamepadInput} from './gamepad.js?v=pad-1';

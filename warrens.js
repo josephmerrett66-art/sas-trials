@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight,riverClearance,WORLD_SIZE} from './terrain.js?v=big-1';
+import {terrainHeight,riverClearance,WORLD_SIZE} from './terrain.js?v=valleys-1';
 
 // Rabbit warrens: open ground with burrow mounds, droppings and worn runs. Rabbits come out
 // near them, and a snare set on a run catches far more often than one set anywhere else.

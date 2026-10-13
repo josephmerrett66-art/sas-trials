@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight} from './terrain.js?v=big-1';
+import {terrainHeight} from './terrain.js?v=valleys-1';
 import {rabbitGeometry} from './wildlife.js?v=warrens-1';
 import {SPIT_HOURS,BOIL_HOURS} from './kit.js?v=orders-1';
 

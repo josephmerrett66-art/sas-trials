@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-import {terrainHeight,WORLD_SIZE,riverClearance} from './terrain.js?v=big-1';
+import {terrainHeight,WORLD_SIZE,riverClearance} from './terrain.js?v=valleys-1';
 import {trailClearance} from './landmark-routes.js?v=big-1';
 import {START} from './navigation.js?v=big-1';
 import {landmarkMaterial} from './landmark-builder.js?v=big-1';

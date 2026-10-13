@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {terrainNormal} from './terrain.js?v=big-1';
+import {terrainNormal} from './terrain.js?v=valleys-1';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {collideForest} from './forest.js?v=big-1';
 import {Pursuer} from './pursuer.js?v=big-1';

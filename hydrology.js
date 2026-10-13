@@ -12,6 +12,11 @@ import {S} from './world-size.js?v=big-1';
 const MAINS=[{inlet:{x:S(720),z:S(-420)},outlet:{x:S(-720),z:S(635)}},{inlet:{x:S(560),z:S(-720)},outlet:{x:S(330),z:S(720)}}],START={x:0,z:12};
 const SOURCE_THRESHOLD=450; // catchment cells (25 m² each) before a branch is a stream
 const MIN_BRANCH=260,MAX_BRANCHES=16;
+// Streams near other water: how far to look, the steepest valley side allowed between them, and
+// a stream's own floodplain width.
+// The widest a river's valley side can ease back into the hills, in metres.
+const OUTER_MAX=130;
+const MAX_GRADE=.05,JOIN_REACH=70,BESIDE_REACH=180,BESIDE_GRADE=.28,STREAM_PLAIN=16;
 
 const hash=(x,z)=>{let k=Math.imul(x|0,374761393)+Math.imul(z|0,668265263);k=Math.imul(k^(k>>>13),1274126177);return ((k^(k>>>16))>>>0)/4294967296;};
 const vnoise=(x,z)=>{const X=Math.floor(x),Z=Math.floor(z),fx=x-X,fz=z-Z,sx=fx*fx*(3-2*fx),sz=fz*fz*(3-2*fz),a=hash(X,Z),b=hash(X+1,Z),c=hash(X,Z+1),d=hash(X+1,Z+1);return a+(b-a)*sx+(c-a)*sz+(a-b-c+d)*sx*sz;};
@@ -108,7 +113,7 @@ export function buildRiverNetwork(base,n,step,half){
  for(const [index,r] of order2.entries()){
   let pts=r.cells.map(point),mouth=null;
   if(!r.main){
-   for(let k=0;k<pts.length;k++){const m=nearestPlaced(pts[k].x,pts[k].z,k===pts.length-1?120:28);if(m){mouth=m;pts=pts.slice(0,k);break;}}
+   for(let k=0;k<pts.length;k++){const m=nearestPlaced(pts[k].x,pts[k].z,k===pts.length-1?120:JOIN_REACH);if(m){mouth=m;pts=pts.slice(0,k);break;}}
    if(!mouth)continue;pts.push({x:mouth.x,z:mouth.z});
    // Streams rise in valleys: drop any upstream reach that would need a deep cut through a ridge.
    for(;;){let low=Infinity,cut=-1;for(let k=0;k<pts.length;k++){const g=height(pts[k].x,pts[k].z);low=Math.min(low,g);if(g-low>13)cut=k;}if(cut<0)break;pts=pts.slice(cut);if(pts.length<3)break;}
@@ -130,6 +135,13 @@ export function buildRiverNetwork(base,n,step,half){
   const balanced=nonIncreasing(ground);level=level.map((v,i)=>Math.min(v,Math.max(balanced[i],ground[i]-.0)));
   const windowed=v=>v.map((_,i)=>{let sum=0,c=0;for(let j=-10;j<=10;j++){sum+=v[Math.max(0,Math.min(v.length-1,i+j))];c++;}return sum/c;});
   level=windowed(level);
+  // A stream beside water already placed sits low enough that the ground between them is a
+  // gentle valley side, never a bank: it can be at most BESIDE_GRADE above that water per metre
+  // of open ground between the two floodplains. Then the level falls again in the downstream order.
+  if(!r.main){for(let i=0;i<pts.length;i++){const p=nearestPlaced(pts[i].x,pts[i].z,BESIDE_REACH);if(p)level[i]=Math.min(level[i],p.S+BESIDE_GRADE*Math.max(0,Math.hypot(p.x-pts[i].x,p.z-pts[i].z)-p.F-STREAM_PLAIN));}for(let i=1;i<level.length;i++)level[i]=Math.min(level[i],level[i-1]);}
+  // No reach falls faster than MAX_GRADE: where the ground drops away sharply the channel cuts
+  // back upstream into a valley instead of leaving a step that the banks would follow.
+  for(let i=level.length-2;i>=0;i--)level[i]=Math.min(level[i],level[i+1]+MAX_GRADE*(s[i+1]-s[i]));
   // Streams settle to the receiving water level before entering its floodplain.
   if(mouth){const reach=mouth.F+14;level=level.map((v,i)=>Math.max(mouth.S,Math.min(v,mouth.S+.03*Math.max(0,length-s[i]-reach))));}
   const points=pts.map((p,i)=>{const t=s[i]/length,w=r.main?4.6+2.4*t:halfWidth;return {x:p.x,z:p.z,s:s[i],S:level[i],w,D:r.main?1.05:.6,F:w+8+6*noise1(s[i]/110+seed+90)};});
@@ -160,11 +172,12 @@ export function carveRivers(heights,n,step,half,rivers){
  const design=(g,t,d,orig)=>{const S=g.a.S+(g.b.S-g.a.S)*t,w=g.a.w+(g.b.w-g.a.w)*t,D=g.a.D+(g.b.D-g.a.D)*t,F=g.a.F+(g.b.F-g.a.F)*t,bank=S+.15;
   if(d<w)return {inside:true,h:bank-(D+.15)*(1-(d/w)**2)};
   const edge=S+.45;if(d<F)return {inside:true,h:bank+.3*(d-w)/(F-w)};
-  const R=Math.min(130,16+6*Math.abs(orig-edge)),u=(d-F)/R;if(u>=1)return null;return {inside:false,h:edge+(orig-edge)*smoothstep(u),u};};
+  const R=Math.min(OUTER_MAX,16+6*Math.abs(orig-edge)),u=(d-F)/R;if(u>=1)return null;return {inside:false,h:edge+(orig-edge)*smoothstep(u),u};};
  // The lowest floodplain wins where rivers meet; another river's outer blend never lowers
  // a floodplain, so banks stay above the water.
- // Between outer blends, the river whose bank is nearest shapes the ground.
- const inner=new Float32Array(N).fill(Infinity),outer=new Float32Array(N).fill(Infinity),outerU=new Float32Array(N).fill(Infinity);
+ // Between outer blends, each river shapes the ground in proportion to how close its bank is,
+ // so two valleys meet in a smooth saddle rather than a step.
+ const inner=new Float32Array(N).fill(Infinity),outer=new Float32Array(N),outerW=new Float32Array(N);
  const bestD=new Float32Array(N),bestSeg=new Int32Array(N).fill(-1),bestT=new Float32Array(N),touched=[],claimed=new Uint8Array(N),claimedList=[];
  for(const river of rivers){
   // Each river is shaped by its nearest segment (continuous along the polyline): scan each
@@ -173,19 +186,19 @@ export function carveRivers(heights,n,step,half,rivers){
   // outer blend, where a fraction of a metre makes no visible difference.
   const segments=points=>{const out=[];for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],dx=b.x-a.x,dz=b.z-a.z;out.push({a,b,dx,dz,len2:dx*dx+dz*dz||1});}return out;};
   const coarse=river.points.filter((p,i)=>i%4===0||i===river.points.length-1);
-  for(const [segs,extra,near] of [[segments(river.points),3,true],[segments(coarse),130,false]]){
+  for(const [segs,extra,near] of [[segments(river.points),3,true],[segments(coarse),OUTER_MAX,false]]){
   touched.length=0;
   segs.forEach((g,k)=>{const reach=Math.max(g.a.F,g.b.F)+extra,x0=Math.max(0,Math.floor((Math.min(g.a.x,g.b.x)-reach+half)/step)),x1=Math.min(n-1,Math.ceil((Math.max(g.a.x,g.b.x)+reach+half)/step)),z0=Math.max(0,Math.floor((Math.min(g.a.z,g.b.z)-reach+half)/step)),z1=Math.min(n-1,Math.ceil((Math.max(g.a.z,g.b.z)+reach+half)/step));
    for(let iz=z0;iz<=z1;iz++)for(let ix=x0;ix<=x1;ix++){const i=iz*n+ix,x=ix*step-half,z=iz*step-half,t=Math.max(0,Math.min(1,((x-g.a.x)*g.dx+(z-g.a.z)*g.dz)/g.len2)),d=Math.hypot(x-g.a.x-t*g.dx,z-g.a.z-t*g.dz);
     if(d>reach)continue;if(bestSeg[i]===-1)touched.push(i);else if(d>=bestD[i])continue;bestD[i]=d;bestSeg[i]=k;bestT[i]=t;}});
   for(const i of touched){const g=segs[bestSeg[i]],F=g.a.F+(g.b.F-g.a.F)*bestT[i],keep=near||!claimed[i];
    if(near&&keep){claimed[i]=1;claimedList.push(i);}
-   if(keep){const r=design(g,bestT[i],bestD[i],original[i]);if(r){if(r.inside)inner[i]=Math.min(inner[i],r.h);else if(r.u<outerU[i]){outer[i]=r.h;outerU[i]=r.u;}}}bestSeg[i]=-1;}
+   if(keep){const r=design(g,bestT[i],bestD[i],original[i]);if(r){if(r.inside)inner[i]=Math.min(inner[i],r.h);else{const w=((1-r.u)/(r.u+.02))**2;outer[i]+=r.h*w;outerW[i]+=w;}}}bestSeg[i]=-1;}
   }
   for(const i of claimedList)claimed[i]=0;claimedList.length=0;
  }
- for(let i=0;i<N;i++){let h=inner[i]<Infinity?inner[i]:outer[i];if(h===Infinity)continue;const x=(i%n)*step-half,z=Math.floor(i/n)*step-half,orig=original[i];
+ for(let i=0;i<N;i++){let h=inner[i]<Infinity?inner[i]:outerW[i]>0?outer[i]/outerW[i]:Infinity;if(h===Infinity)continue;const x=(i%n)*step-half,z=Math.floor(i/n)*step-half,orig=original[i];
   // The start clearing keeps its exact ground; the reshaping fades out before it.
   const keep=smoothstep(Math.min(1,Math.max(0,(Math.hypot(x-START.x,z-START.z)-40)/50)));heights[i]=orig+(h-orig)*keep;}
- return riverIndex(rivers,48,150);
+ return riverIndex(rivers,48,OUTER_MAX+20);
 }

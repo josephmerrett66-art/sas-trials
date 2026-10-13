@@ -1,6 +1,6 @@
 import {trails} from './landmark-routes.js?v=big-1';
 import * as THREE from './vendor/three.module.js';
-import {terrainHeight,WORLD_SIZE} from './terrain.js?v=big-1';
+import {terrainHeight,WORLD_SIZE} from './terrain.js?v=valleys-1';
 import {START,gridReference,coordinates} from './navigation.js?v=big-1';
 import {formatClock} from './daycycle.js?v=1';
 

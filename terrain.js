@@ -1,15 +1,19 @@
 // Shared triangulated height field: physics and decoration sample the rendered surface.
-import {buildRiverNetwork,carveRivers,riverIndex} from './hydrology.js?v=big-1';
+import {buildRiverNetwork,carveRivers,riverIndex} from './hydrology.js?v=valleys-1';
 import {WORLD_SIZE} from './world-size.js?v=big-1';
 export {WORLD_SIZE};
-export const TERRAIN_STEP=5, TERRAIN_SEGMENTS=WORLD_SIZE/TERRAIN_STEP;
+export const TERRAIN_STEP=5, TERRAIN_SEGMENTS=WORLD_SIZE/TERRAIN_STEP, START_EASE=80;
 const half=WORLD_SIZE/2,n=TERRAIN_SEGMENTS+1,heights=new Float32Array(n*n);
 const broad=(x,z)=>13*Math.sin(x/430+.7)*Math.cos(z/370-.5)+8*Math.sin((x-z)/690+1.3);
+// Rolling hills, over broad ridges and valleys a kilometre or so across.
+const hills=(x,z)=>11*Math.sin(x/82)*Math.cos(z/105)+7*Math.sin((x+z)/58)+4*Math.cos(x/42)*Math.sin(z/67)+broad(x,z);
+// The start clearing is a level terrace cut at the hillside's own height, eased into the slope
+// over a wide ring so it never leaves a bank. The whole map is offset so the clearing is at 0.
+const startLevel=hills(0,8);
 for(let iz=0;iz<n;iz++)for(let ix=0;ix<n;ix++){
  const x=ix*TERRAIN_STEP-half,z=iz*TERRAIN_STEP-half;
- const blend=Math.min(1,Math.max(0,(Math.hypot(x,z-8)-18)/28)),smooth=blend*blend*(3-2*blend);
- // Rolling hills, over broad ridges and valleys a kilometre or so across.
- heights[iz*n+ix]=smooth*(11*Math.sin(x/82)*Math.cos(z/105)+7*Math.sin((x+z)/58)+4*Math.cos(x/42)*Math.sin(z/67)+broad(x,z));
+ const blend=Math.min(1,Math.max(0,(Math.hypot(x,z-8)-18)/START_EASE)),smooth=blend*blend*(3-2*blend);
+ heights[iz*n+ix]=smooth*(hills(x,z)-startLevel);
 }
 // Rivers follow the original low ground; the grid is then reshaped so they can flow.
 export const rivers=buildRiverNetwork(heights,n,TERRAIN_STEP,half);carveRivers(heights,n,TERRAIN_STEP,half,rivers);

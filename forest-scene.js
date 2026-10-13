@@ -12,7 +12,7 @@ import * as THREE from './vendor/three.module.js';
 import {createGroundMaterial} from './ground-material.js?v=gravel-1';
 import {createSurfaceMaterial} from './surface-material.js?v=details-1';
 import {makeSourceSteps} from './forest-visibility.js?v=big-1';
-import {terrainHeight,terrainNormal,WORLD_SIZE,TERRAIN_STEP,riverClearance} from './terrain.js?v=big-1';
+import {terrainHeight,terrainNormal,WORLD_SIZE,TERRAIN_STEP,riverClearance} from './terrain.js?v=valleys-1';
 export {trailCenter};
 
 // The forest is laid out once for the whole map (trees, rocks, stumps, logs: everything
