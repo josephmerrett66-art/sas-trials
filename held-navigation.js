@@ -3,7 +3,7 @@ import {CompassHeading} from './compass-heading.js?v=1';
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {NavigationArms} from './navigation-arms.js?v=always-held-1';
-import {stickGeometry} from './forest-floor.js?v=1';
+import {stickGeometry} from './forest-floor.js?v=2';
 // One static chart texture and a small shared-material rig; no lights or shadow passes.
 export class HeldNavigation {
  constructor(camera,chart){

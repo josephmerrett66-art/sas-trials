@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {terrainHeight} from './terrain.js?v=big-1';
-import {rabbitGeometry} from './wildlife.js?v=sticks-1';
+import {rabbitGeometry} from './wildlife.js?v=warrens-1';
 
 export const FIRE_REACH=4,SNARE_REACH=2.2,MAX_SNARES=4;
 let seed=9127;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -74,9 +74,10 @@ export class Camp {
  warming(player){return this.lit&&this.near(player);}
  // Fuel is in game hours; rain makes a fire burn faster.
  burn(hours,rain=0){if(this.fire)this.fire.fuel=Math.max(0,this.fire.fuel-hours*(1+.5*rain));}
- setSnare(x,z,hours,chance=random()){
+ // odds: how likely the snare is to catch at all; a run by a warren is far better than anywhere else.
+ setSnare(x,z,hours,chance=random(),odds=.8){
   // Most snares take a rabbit within a few hours; some never do.
-  this.snares.push({x,z,y:terrainHeight(x,z),set:hours,catchAt:chance<.8?hours+1.5+chance*6:Infinity,yaw:random()*6.28});this.syncSnares(hours);
+  this.snares.push({x,z,y:terrainHeight(x,z),set:hours,catchAt:chance<odds?hours+1.5+chance/odds*4.8:Infinity,yaw:random()*6.28});this.syncSnares(hours);
  }
  nearSnare(player,reach=SNARE_REACH){let best=null,bd=reach;for(const s of this.snares){const d=Math.hypot(player.x-s.x,player.z-s.z);if(d<bd){bd=d;best=s;}}return best;}
  // Lifting a snare returns whether it held a rabbit.

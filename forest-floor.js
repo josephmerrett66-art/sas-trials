@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {terrainHeight,riverClearance} from './terrain.js?v=big-1';
 import {nearbyObstacles} from './obstacle-grid.js';
-import {rabbitGeometry} from './wildlife.js?v=sticks-1';
+import {rabbitGeometry} from './wildlife.js?v=warrens-1';
 
 // The forest floor you can use: fallen branches under the trees, your thrown stick where it
 // landed, and a rabbit it dropped. One instanced draw for every branch and stick, one for

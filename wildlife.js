@@ -22,8 +22,9 @@ export const RABBITS=6,THROW_RANGE=12;
 // A small fixed pool that wanders near the player: graze, hop, bolt when disturbed.
 // Dawn and dusk bring the most rabbits out. One draw; no allocations per frame.
 export class Wildlife {
- constructor(scene,{seed=5531,obstacleClear=()=>true}={}){
-  this.seed=seed;this.clear=obstacleClear;
+ // home(x,z): the nearest warren, if any; most rabbits come out near one.
+ constructor(scene,{seed=5531,obstacleClear=()=>true,home=null}={}){
+  this.seed=seed;this.clear=obstacleClear;this.home=home;
   this.mesh=new THREE.InstancedMesh(rabbitGeometry(),new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}),RABBITS);this.mesh.name='Rabbits';this.mesh.frustumCulled=false;this.mesh.count=0;scene.add(this.mesh);
   this.rabbits=Array.from({length:RABBITS},()=>({active:false,x:0,z:0,y:0,yaw:0,state:'graze',timer:0,hop:0,hopTime:0,vx:0,vz:0}));
   this.transform=new THREE.Object3D();this.spawnTimer=1;
@@ -33,7 +34,9 @@ export class Wildlife {
  // How alert rabbits are to the player: crouching lets you creep close, running carries.
  static noticeRange(player){return player.state==='CROUCHED'?5:player.state==='SPRINTING'?24:Math.hypot(player.vx,player.vz)>.5?13:8;}
  spawn(r,player){
-  for(let attempt=0;attempt<6;attempt++){const a=this.random()*Math.PI*2,d=35+this.random()*40,x=player.x+Math.cos(a)*d,z=player.z+Math.sin(a)*d;
+  const home=this.home?.(player.x,player.z);
+  for(let attempt=0;attempt<6;attempt++){let a=this.random()*Math.PI*2,d=35+this.random()*40,x=player.x+Math.cos(a)*d,z=player.z+Math.sin(a)*d;
+   if(home&&attempt<4){a=this.random()*Math.PI*2;d=2+this.random()*16;x=home.x+Math.cos(a)*d;z=home.z+Math.sin(a)*d;if(Math.hypot(x-player.x,z-player.z)<18)continue;}
    if(Math.abs(x)>WORLD_SIZE/2-10||Math.abs(z)>WORLD_SIZE/2-10||riverClearance(x,z)<3||!this.clear(x,z))continue;
    Object.assign(r,{active:true,x,z,y:terrainHeight(x,z),yaw:this.random()*6.28,state:'graze',timer:1+this.random()*3,hop:0,hopTime:0,vx:0,vz:0});return true;}
   return false;

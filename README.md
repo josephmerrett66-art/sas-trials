@@ -1,3 +1,14 @@
+# Rabbit warrens and snares on runs (overhaul phase 2, part 2)
+
+Rabbits now live somewhere. About two thirds of the 150 m map squares have a warren on level, open, dry ground: two low earth mounds with dark burrow mouths, droppings and bare scrapes, in the same faceted style as the springs (`warrens.js`). Most rabbits come out within about 18 m of the nearest warren (never right beside you), so a warren is where to hunt.
+
+- Look at a warren: "Rabbit runs · Set snare · G". A snare set within 12 m of a warren catches 85% of the time; anywhere else only 20%, and the message says so. A catch still comes within a few hours.
+- The hunger advice mentions the warren runs when you carry snare wire.
+
+Checks: all node tests pass, with the new tests/warrens.mjs covering fixed placement (level, open, clear of rivers and trees), the nearest-warren lookup, the bounded view, snare odds on and off a run, and rabbits spawning by warrens. Browser-checked: walking up to the nearest warren to the start shows the label, G sets a snare on the run, and rabbits come out near it. Screenshot: `artifacts/survival-warren.png`. No browser errors. Placing all warrens takes about 3 ms at load.
+
+Performance: one instanced draw for the warrens around you (at most 9 in the surrounding squares, about 180 triangles each), rewritten only after you move 10 m. The stress test before and after, in cloud software rendering at the same small viewport: draw calls 29 to 30 both, CPU 2.5 to 2.6 ms before and 2.7 to 3.0 ms after, update phase 0.31 to 0.33 ms before and 0.29 to 0.36 ms after, all within run-to-run noise (`artifacts/survival-warrens-before-performance.json`, `artifacts/survival-warrens-after-performance.json`). 60 FPS on the development Mac is still not confirmed.
+
 # The hunt: branch, knife, throwing stick (overhaul phase 2)
 
 You no longer start with a throwing stick. You make one.

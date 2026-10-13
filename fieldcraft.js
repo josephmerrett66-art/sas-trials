@@ -24,7 +24,7 @@ export function lookTarget(player,kit,near,input='keyboard'){
  return target;
 }
 function lookAt(player,kit,near,keys){
- const {post=null,postReached=false,snare=null,snareCaught=false,carcass=null,stick=null,fire=null,water=false,rabbit=null,branch=null,tree=null,sleepable=false,reach={}}=near;
+ const {post=null,postReached=false,snare=null,snareCaught=false,carcass=null,stick=null,fire=null,water=false,rabbit=null,warren=null,branch=null,tree=null,sleepable=false,reach={}}=near;
  const verb=(text,key)=>key?`${text} · ${key}`:text;
  if(post&&facing(player,post.x,post.z,reach.post??2.8))return postReached?{act:null,label:`Post ${post.code} · reached`}:{act:'register',label:verb(`Register post ${post.code}`,keys.use)};
  if(snare&&facing(player,snare.x,snare.z,reach.snare??2.2))return {act:'lift',label:verb(snareCaught?'Lift snare · rabbit caught':'Lift snare',keys.use)};
@@ -47,6 +47,7 @@ function lookAt(player,kit,near,keys){
   if(kit.sticks>0)return {act:'throw',label:verb('Throw stick at rabbit',keys.hold)};
   return {act:null,label:kit.branches>0?'Rabbit · whittle your branch into a throwing stick first':'Rabbit · find a straight branch under the trees for a throwing stick'};
  }
+ if(warren&&facing(player,warren.x,warren.z,reach.warren??3.5,1.5))return kit.snares>0?{act:'snare',label:verb('Rabbit runs · Set snare',keys.use)}:{act:null,label:'Rabbit runs · no snare wire left'};
  if(branch&&facing(player,branch.x,branch.z,reach.pick??2.2))return {act:'branch',label:verb('Pick up branch',keys.use)};
  if(tree&&facing(player,tree.x,tree.z,reach.tree??2.6,tree.radius??0))return kit.wood<MAX_WOOD?{act:'gather',label:verb('Gather dead wood',keys.use)}:{act:null,label:`Dead wood · carrying ${MAX_WOOD} bundles`};
  return null;
@@ -64,7 +65,7 @@ export function needAdvice(kit,previous){
  if(!worse)return '';
  const band=now[worse],lead=band.toLowerCase();
  if(worse==='energy'){
-  const food=kit.cooked>0?'Eat your cooked rabbit.':kit.raw>0?'Cook your rabbit at a fire before you eat it.':kit.rations>0?`Eat a ration, or keep it and hunt: rabbits graze at meadow edges, most at dawn and dusk.`:kit.sticks>0?'Creep up on a rabbit and throw your stick, or set a snare where they graze.':kit.branches>0?'Whittle your branch into a throwing stick and hunt a rabbit.':'Find a straight branch under the trees, whittle a throwing stick and hunt a rabbit.';
+  const food=kit.cooked>0?'Eat your cooked rabbit.':kit.raw>0?'Cook your rabbit at a fire before you eat it.':kit.rations>0?`Eat a ration, or keep it and hunt: rabbits graze at meadow edges, most at dawn and dusk.`:kit.sticks>0?`Creep up on a rabbit and throw your stick${kit.snares>0?', or set a snare on the runs by a warren':''}.`:kit.branches>0?'Whittle your branch into a throwing stick and hunt a rabbit.':'Find a straight branch under the trees, whittle a throwing stick and hunt a rabbit.';
   return band==='Hungry'?`Getting hungry. ${food}`:`You are ${lead} with hunger. ${food}`;
  }
  if(worse==='hydration'){const drink=kit.water>.001?'Drink from your bottle.':'Your bottles are empty. Springs are the blue dots on your map; rivers work too.';return band==='Thirsty'?`Thirsty. ${drink}`:`You are ${lead}. ${drink}`;}
