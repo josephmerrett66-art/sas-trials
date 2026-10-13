@@ -18,14 +18,14 @@ export function backpackRows(kit,near){
 }
 const GEAR=[['firesteel','fire steel'],['filter','water filter'],['stove','stove and mess tin'],['waterproof','waterproof'],['bedroll','sleeping bag']];
 
-// One backpack for every input: Tab or I on a keyboard, right stick click on Xbox, the KIT
-// button on touch. Rebuilt only when what it shows changes; arrow keys or the D-pad move
+// One backpack for every input: Tab or I on a keyboard, right stick click on Xbox, or the BAG
+// button on screen. Rebuilt only when what it shows changes; arrow keys or the D-pad move
 // between actions and Enter, Space or A uses one.
 export class InventoryView {
  constructor(kit,{enabled,near,actions={},onClose=()=>{}}){
   this.kit=kit;this.near=near;this.actions=actions;this.onClose=onClose;
   this.root=document.querySelector('#kit-menu');this.sheet=this.root.querySelector('#kit-sheet');this.toggleButton=this.root.querySelector('#kit-toggle');this.body=this.sheet.querySelector('#kit-contents');this.messageLine=this.sheet.querySelector('#kit-message');
-  this.root.hidden=false;this.toggleButton.hidden=!enabled;this.rendered='';
+  this.root.hidden=false;this.toggleButton.hidden=false;this.toggleButton.innerHTML=enabled?'BAG':'BAG <kbd>Tab</kbd>';this.toggleButton.title='Open your bergen (Tab or I)';this.rendered='';
   this.toggleButton.onclick=()=>this.open?this.close():this.show();
   this.sheet.querySelector('[data-kit="close"]').onclick=()=>this.close();
   // The bergen itself sits at the top: rearrange it to make room for wood and game.

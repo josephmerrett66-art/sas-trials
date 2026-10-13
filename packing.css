@@ -97,3 +97,6 @@ body.touch-mode #vitals{bottom:calc(166px + env(safe-area-inset-bottom))}
 /* On the move: the same grid at the top of the KIT sheet, for rearranging. */
 #kit-bergen{display:flex;flex-direction:column;align-items:center;margin:6px 0 4px}
 #kit-bergen .bergen-tools{justify-content:center}
+body:not(.touch-mode) #kit-toggle{bottom:22px}
+#kit-toggle kbd{margin-left:6px;padding:1px 5px;border:1px solid #a89d7e;border-radius:4px;font:600 10px 'DM Sans',sans-serif;letter-spacing:.5px;opacity:.75}
+body:not(.touch-mode) #kit-sheet{top:auto;transform:none;bottom:80px;max-height:calc(100dvh - 104px)}

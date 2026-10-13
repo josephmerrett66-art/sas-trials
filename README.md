@@ -16,7 +16,7 @@ Checks: all node tests pass, with tests/bergen.mjs covering fitting, turning, mo
 
 # Bergen (backpack)
 
-Open your bergen with Tab or I on a keyboard, the right stick click on Xbox, or the KIT button on a phone. The world keeps running while it is open; the mouse is freed so you can click, and Tab, I or Close puts it away and takes the mouse back (click the scene if the browser asks).
+Open your bergen with Tab or I on a keyboard, the right stick click on Xbox, or the BAG button at the bottom right of the screen (it shows the Tab shortcut on a laptop). The world keeps running while it is open; the mouse is freed so you can click, and Tab, I or Close puts it away and takes the mouse back (click the scene if the browser asks).
 
 Every survival action is in it, item by item, and greyed out when it is not possible where you stand:
 - Water: drink, or fill at a spring, stream or river.
@@ -56,7 +56,7 @@ The map is now 3.2 × 3.2 km (about 4.9 times the old 1.44 km map's area), so le
 - Z: sleep from 19:30 until dawn, beside a fire or in a bedroll. A fire that dies in the night wakes you cold.
 - N: set a snare. Most catch a rabbit within a few hours; come back for it.
 - Rabbits come out most at dawn and dusk. Creep up crouched; running scares them off.
-- On a phone, all of these are on the KIT sheet.
+- On a phone, all of these are in the BAG sheet.
 
 **Streaming forest.** The whole layout (trees, rocks, stumps, logs, every collider) is generated once for the whole map, but only drawn near you. `forest-scene.js` builds 160 m chunks within 170 m of the player, spreading each chunk over many frames (at most about 2.5 ms of work per frame) and dropping chunks beyond 260 m. All chunks feed the same pooled instanced batches, so the draw-call count does not grow with the map. The cached sun shadow map is re-baked for the loaded area when the set of chunks changes, rather than covering the whole map once. River tiles are now distance-culled like the ground.
 
@@ -71,7 +71,7 @@ One river crosses the map from the east edge to the south-west corner, joined by
 - The water level never rises downstream and always sits below the lowest ground across the floodplain. Where the land ahead rises, the river cuts a water gap through it instead of floating. The terrain is reshaped around each channel: a bed, a low floodplain, then a smooth blend back to the original hills. The start clearing, every post and every control feature are kept dry and unchanged.
 - `river.js` builds one level water ribbon per channel, with its edges hidden under the banks. It reuses the existing ripple shader and terrain-tile culling, with no new lights, shadows, reflections or transparency.
 - Rivers and streams are drawn on the chart in blue beneath the tracks; tracks cross them at fords. Trees, grass, flowers and springs are kept off the water.
-- Wading slows you, down to a little over half pace in the deepest water. G / Xbox X (or Fill bottles on the phone KIT sheet) refills at the river as well as at springs; the same untreated-water rule applies.
+- Wading slows you, down to a little over half pace in the deepest water. G / Xbox X (or Fill bottles on the phone BAG sheet) refills at the river as well as at springs; the same untreated-water rule applies.
 
 Checks: tests/river.mjs covers downhill flow on every channel, branching, matching junction levels, water over every bed, banks above the water edge, dry posts and start, and bounded water tiles. All tests pass; the forest tree count changed (24,388 to 23,544) because trees no longer grow in the channels. Browser-checked riverbanks, a junction and the chart: artifacts/river-network-bank.png, river-network-junction.png and river-network-chart.png. The `?benchmark=1&weapon=1` stress test could not be measured in the cloud (software rendering, about 3 FPS), so frame times on the development Mac still need checking.
 
@@ -85,7 +85,7 @@ Every attempt now starts at a kit list. BEGIN EXERCISE opens **Pack your bergen*
 - V / Xbox D-pad down: drink 0.5 L. B / Xbox D-pad up: eat a ration (more energy with the stove).
 - Springs: small pools in natural hollows, ringed with mossy stones and reeds, with a blue-banded timber stake. They are found once from the terrain (clear of trees, tracks, posts and the start, at least 260 m apart) and marked as blue dots on the chart. G / Xbox X beside one fills every bottle. Without the filter that water is untreated: each drink has a 40% chance of making you unwell, doubling thirst for three minutes. With no bottles you can still drink at the spring.
 - No new screen overlays during play. Kit and condition are pencilled along the bottom margin of the held chart (words, not gauges, so the chart texture only updates on changes); a soft dark vignette grows as either need runs low. The pause menu shows the full condition report.
-- Phones and tablets get a faint KIT button above Run and Jump (laptops and controllers do not). It opens a small paper sheet with water, rations and condition, plus Drink, Eat, Fill at spring (enabled beside a spring) and Register post (shown beside a post). `inventory-view.js`, tests/inventory.mjs.
+- Phones and tablets get a faint BAG button above Run and Jump (laptops show it in the bottom-right corner). It opens a small paper sheet with water, rations and condition, plus Drink, Eat, Fill at spring (enabled beside a spring) and Register post (shown beside a post). `inventory-view.js`, tests/inventory.mjs.
 - `kit.js` holds the rules (pure, node-testable), `springs.js` placement and models, `packing-view.js` the kit list and condition UI. `?navtest=1` adds spring teleport buttons and exposes `window.navtest` for browser checks.
 
 Checks: tests/kit.mjs covers weight and pace, the packing lock, effort/load/climb/rain drain, drinking, eating, the stove, refills, untreated illness, withdrawal, controller pace, spring placement rules and spring culling. All existing tests pass. Browser-verified the packing screen, drinking, eating, refilling at a spring, chart notes and withdrawal. Preview: artifacts/kit-packing.png.
