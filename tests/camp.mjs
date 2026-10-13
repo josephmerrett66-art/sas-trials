@@ -45,8 +45,8 @@ assert.equal(camper.lightFire(),2*BURN_PER_WOOD);assert.equal(camper.wood,MAX_WO
 assert.equal(camper.stokeFire(1),1+BURN_PER_WOOD);assert.equal(camper.wood,MAX_WOOD-3);
 const nosteel=new FieldKit();nosteel.set('firesteel',0);nosteel.pack();nosteel.wood=4;assert.equal(nosteel.lightFire(),0,'a fire steel is needed');
 camper.catchRabbit();assert.equal(camper.raw,1);assert.equal(camper.cook(),true);assert.equal(camper.cooked,1);assert.equal(camper.raw,0);
-camper.energy=20;camper.eat();assert.equal(camper.energy,65,'cooked rabbit is eaten first');assert.equal(camper.rations,2);
-const raw=new FieldKit(()=>0);raw.set('rations',0);raw.pack();raw.raw=1;raw.energy=20;raw.eat();assert.equal(raw.energy,40);assert.ok(raw.sick>0,'raw meat can make you ill');
+camper.energy=20;camper.eat();assert.equal(camper.energy,65,'cooked rabbit is eaten first');assert.equal(camper.rations,1);
+const raw=new FieldKit(()=>0);raw.set('rations',0);raw.pack();raw.raw=1;raw.energy=20;raw.eat();assert.equal(raw.energy,35);assert.ok(raw.sick>0,'raw meat can make you ill');
 const boil=new FieldKit();boil.set('stove',1);boil.set('filter',0);boil.pack();boil.water=0;boil.refill();assert.ok(boil.untreated>1);boil.cook();assert.equal(boil.untreated,0,'a mess tin boils water safe at a fire');
 // Snares.
 assert.equal(camper.snares,2);assert.equal(camper.setSnare(),true);assert.equal(camper.snares,1);camper.recoverSnare(true);assert.equal(camper.snares,2);assert.equal(camper.raw,1);

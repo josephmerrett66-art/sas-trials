@@ -1,4 +1,4 @@
-import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=bergen-1';
+import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=pacing-1';
 import {BergenView} from './bergen-view.js?v=1';
 import {SHAPES} from './bergen-grid.js?v=1';
 

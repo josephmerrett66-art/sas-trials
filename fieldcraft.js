@@ -1,0 +1,57 @@
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,LITRE} from './kit.js?v=pacing-1';
+// What the player is looking at and what G does to it, and the short inner-voice advice when a
+// need gets worse. Pure: no DOM or rendering, so it can be tested in node.
+
+// About 35° either side of straight ahead; anything closer than `close` counts whatever the facing.
+export const LOOK_CONE=.82;
+export function facing(player,x,z,reach,radius=0,close=1.1){
+ const dx=x-player.x,dz=z-player.z,d=Math.hypot(dx,dz);
+ if(d-radius>reach)return false;if(d-radius<close||d<1e-6)return true;
+ return (dx*-Math.sin(player.yaw)+dz*-Math.cos(player.yaw))/d>=LOOK_CONE;
+}
+// Key names per input, for the look-at label.
+export const KEYS={keyboard:{use:'G',fire:'F',sleep:'Z'},pad:{use:'X',fire:'RT',sleep:'LT'},touch:{use:'Tap',fire:null,sleep:null}};
+
+// near: what is within reach, worked out by the game. Returns {act,label} for the first thing the
+// player is looking at, in priority order, or null. act is what G (or a tap on touch) does.
+export function lookTarget(player,kit,near,input='keyboard'){
+ const {post=null,postReached=false,snare=null,snareCaught=false,fire=null,water=false,rabbit=null,tree=null,sleepable=false,reach={}}=near,keys=KEYS[input]??KEYS.keyboard;
+ const verb=(text,key)=>key?`${text} · ${key}`:text;
+ if(post&&facing(player,post.x,post.z,reach.post??2.8))return postReached?{act:null,label:`Post ${post.code} · reached`}:{act:'register',label:verb(`Register post ${post.code}`,keys.use)};
+ if(snare&&facing(player,snare.x,snare.z,reach.snare??2.2))return {act:'lift',label:verb(snareCaught?'Lift snare · rabbit caught':'Lift snare',keys.use)};
+ if(fire&&facing(player,fire.x,fire.z,reach.fire??4)){
+  // G (or a tap) does the first of these; the others keep their own keys.
+  const parts=[],cook=kit.raw>0||(kit.untreated>.001&&kit.has('stove'));let act=null;
+  if(kit.wood>0){act='stoke';parts.push(verb('Add wood',keys.use));}
+  if(cook){act??='cook';parts.push(verb(kit.raw>0?'Cook rabbit':'Boil water',act==='cook'?keys.use:keys.fire));}
+  if(sleepable&&keys.sleep)parts.push(verb('Sleep',keys.sleep));
+  return {act,label:parts.length?`Campfire · ${parts.join('   ')}`:'Campfire · gather wood to keep it going'};
+ }
+ if(water){
+  if(!kit.bottles)return {act:'fill',label:verb('Drink from the water',keys.use)};
+  return kit.bottles*LITRE-kit.water>.001?{act:'fill',label:verb(kit.has('filter')?'Fill bottles':'Fill bottles · untreated',keys.use)}:{act:null,label:'Water · bottles full'};
+ }
+ if(rabbit)return {act:'throw',label:verb('Throw stick at rabbit',keys.use)};
+ if(tree&&facing(player,tree.x,tree.z,reach.tree??2.6,tree.radius??0))return kit.wood<MAX_WOOD?{act:'gather',label:verb('Gather dead wood',keys.use)}:{act:null,label:`Dead wood · carrying ${MAX_WOOD} bundles`};
+ return null;
+}
+
+// Need bands, worst last. A band only counts as worse when it moves further down this list.
+const BANDS={energy:['Good','Hungry','Weak','Exhausted'],hydration:['Good','Thirsty','Parched','Dehydrated'],warmth:['Warm','Cold','Shivering','Hypothermic'],fatigue:['Rested','Tired','Exhausted']};
+export function needBands(kit,out={}){out.energy=energyWord(kit.energy);out.hydration=hydrationWord(kit.hydration);out.warmth=warmthWord(kit.warmth);out.fatigue=fatigueWord(kit.awake);return out;}
+// One line of advice for the need that just got worse, or '' when nothing did. Says what to do
+// next with what is actually in the bergen, so the next step is always clear.
+const scratch={};
+export function needAdvice(kit,previous){
+ const now=needBands(kit,scratch);let worse=null;
+ for(const need of ['hydration','warmth','energy','fatigue'])if(previous&&BANDS[need].indexOf(now[need])>BANDS[need].indexOf(previous[need])){worse=need;break;}
+ if(!worse)return '';
+ const band=now[worse],lead=band.toLowerCase();
+ if(worse==='energy'){
+  const food=kit.cooked>0?'Eat your cooked rabbit.':kit.raw>0?'Cook your rabbit at a fire before you eat it.':kit.rations>0?`Eat a ration, or keep it and hunt: rabbits graze at meadow edges, most at dawn and dusk.`:'Throw your stick at a rabbit, or set a snare where they graze.';
+  return band==='Hungry'?`Getting hungry. ${food}`:`You are ${lead} with hunger. ${food}`;
+ }
+ if(worse==='hydration'){const drink=kit.water>.001?'Drink from your bottle.':'Your bottles are empty. Springs are the blue dots on your map; rivers work too.';return band==='Thirsty'?`Thirsty. ${drink}`:`You are ${lead}. ${drink}`;}
+ if(worse==='warmth'){const fire=kit.wood>=2&&kit.has('firesteel')?'Light a fire: you have the wood.':'A fire would help. Gather dead wood beside the big trees.';return band==='Cold'?`Getting cold. ${fire}`:`You are ${lead}. ${fire}`;}
+ return band==='Tired'?'Tired. Make camp after dusk, by a fire or in your sleeping bag.':'Exhausted. You need to sleep tonight.';
+}

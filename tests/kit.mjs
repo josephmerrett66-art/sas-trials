@@ -28,8 +28,8 @@ assert.ok(wet.energy<dry.energy,'rain saps energy');assert.ok(jacket.energy>wet.
 
 // Drinking, eating and weight loss.
 const before=kit.weight;kit.hydration=40;assert.equal(kit.drink(),true);assert.equal(kit.water,1.5);assert.equal(kit.hydration,70);assert.ok(kit.weight<before,'drunk water is no longer carried');
-kit.energy=10;assert.equal(kit.eat(),true);assert.equal(kit.energy,45);assert.equal(kit.rations,1);
-const stove=new FieldKit();stove.set('stove',1);stove.pack();stove.energy=10;stove.eat();assert.equal(stove.energy,65,'a stove makes rations go further');
+kit.energy=10;assert.equal(kit.eat(),true);assert.equal(kit.energy,40);assert.equal(kit.rations,1);
+const stove=new FieldKit();stove.set('stove',1);stove.pack();stove.energy=10;stove.eat();assert.equal(stove.energy,55,'a stove makes rations go further');
 kit.drink();kit.drink();kit.drink();assert.equal(kit.water,0);assert.equal(kit.drink(),false,'empty bottles cannot be drunk');kit.eat();assert.equal(kit.eat(),false);
 
 // Refilling: filtered water is safe, untreated water can make you ill.

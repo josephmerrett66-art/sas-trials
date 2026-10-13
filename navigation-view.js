@@ -35,8 +35,8 @@ export class NavigationView {
  refreshNotes(){if(this.notes!==this.renderedNotes)this.drawMap();}
  update(player){
   if(this.renderedStage!==this.exercise.stage){this.updateAssignment();if(!this.exercise.complete){this.close();this.toggle('assignment');}}
-  const near=this.exercise.nearby(player);this.prompt.textContent=near&&!this.exercise.complete?(this.exercise.checkpoints.indexOf(near)<this.exercise.stage?`Post ${near.code} · Reached`:`Post ${near.code} · G / Xbox X to register`):'';
-  this.notice.textContent=this.exercise.messageTime>0?this.exercise.message:'';
+  // The look-at label (this.prompt) belongs to the fieldcraft code; this only shows results.
+  const notice=this.exercise.messageTime>0?this.exercise.message:'';if(this.notice.textContent!==notice)this.notice.textContent=notice;
   if(this.exercise.complete){this.close();this.summary.hidden=true;document.querySelector('#summary-copy').textContent=`${this.exercise.checkpoints.length} / ${this.exercise.checkpoints.length} checkpoints reached · ${Math.round(this.exercise.distance)} m travelled · ${Math.round(this.exercise.elevation)} m elevation gained`;}
  }
  drawMap(){

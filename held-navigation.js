@@ -28,11 +28,13 @@ export class HeldNavigation {
   this.arms=new NavigationArms(this.root);this.ready=this.arms.ready;
   this.root.visible=false;
  }
- update(player,dt=0,feel=null,active=true){
+ // tremor 0..1: cold or hunger makes the hands shake, so the map and compass tremble.
+ update(player,dt=0,feel=null,active=true,tremor=0){
   this.heading.update(this.camera);
   this.root.visible=active;if(!active)return;
   // Equipment stays low in the world; looking down brings it into view.
   this.root.rotation.x=-player.pitch;
+  this.shake=(this.shake??0)+dt;const t=this.shake;this.root.position.set((Math.sin(t*43)+Math.sin(t*71)*.6)*.0028*tremor,(Math.sin(t*37+1)+Math.sin(t*89)*.5)*.0022*tremor,0);
   this.arms.update(dt,player,feel);
   // Keep the chart edge and compass seated in the animated gun-arm grips.
   this.map.position.set(this.arms.right.x-.34,this.arms.right.y-.04,this.arms.right.z-.11);

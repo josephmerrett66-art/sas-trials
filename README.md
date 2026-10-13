@@ -1,3 +1,19 @@
+# Survival you can feel (overhaul phases 0 and 1)
+
+The first step of the survival overhaul (plan: `survival-overhaul-plan.md` in the project files). The game now tells you what is going on while you play, and your body warns you before the bars do.
+
+- **Look-at label:** a small line of text under the centre of the screen names what you are looking at and what G (Xbox X) does to it: "Gather dead wood · G", "Fill bottles · G", "Register post A · G", "Lift snare · rabbit caught · G", "Throw stick at rabbit · G", or at a lit fire "Campfire · Add wood · G   Cook rabbit · F   Sleep · Z". G now does exactly what the label says, and only to what you are facing. On touch the label is a button: tap it.
+- **Result line:** what just happened ("Gathered dead wood · 1 bundle", "Missed. It bolts for cover.", "Dusk is coming…") shows near the bottom for a few seconds. These messages were hidden during play before.
+- **Inner voice:** when a need gets worse, one line says what to do next with what you carry, for example "Getting hungry. Eat a ration, or keep it and hunt: rabbits graze at meadow edges, most at dawn and dusk." or "Thirsty. Your bottles are empty. Springs are the blue dots on your map."
+- **Body cues:** a stomach growl when hungry, a dry swallow when thirsty, chattering teeth when shivering, the map and compass trembling in your hands when cold (or weak with hunger), and slow blinks when tired. Sounds are synthesised from one shared noise buffer (`body-cues.js`).
+- **Condition bars fade:** the four bars stay out of sight while everything is above 60 and fade in once anything drops below it (out again above 65).
+- **Hunger matters:** one ration packed by default instead of two, energy runs out in about 20 real minutes instead of 28, rations restore 30 (45 hot), raw rabbit 15, and cooked rabbit still 45 plus 10 warmth.
+- **Clean-up:** the unused barrel-and-medkit survival mode (`survival.js`, `survival-threats.js` and their tests) is gone. The look-at and advice rules live in `fieldcraft.js`.
+
+Checks: all node tests pass, with the new tests/fieldcraft.mjs covering facing, label priority and key names, campfire options, the inner-voice advice, body-cue timing and tremor, and the bar fade thresholds. Browser-checked (software rendering): facing a tree shows the label and turning away clears it, G gathers and the result line shows, dropping energy shows the advice and fades the bars in, cold and tiredness give the shivering advice, and on a touch screen tapping the label gathers wood. Screenshots: `artifacts/survival-look-label.png`, `artifacts/survival-hungry-advice.png`, `artifacts/survival-touch-label.png`. No browser errors.
+
+Performance: no meshes, materials, lights or shadow passes were added; the label and advice are worked out at the 10 Hz HUD rate with one reused object, and body cues are timers. The `?benchmark=1&weapon=1` stress test, run before and after at the same small viewport in cloud software rendering, shows the same draw calls (29 to 30) and CPU time (2.5 to 3.5 ms) within run-to-run noise (`artifacts/survival-feedback-before-performance.json`, `artifacts/survival-feedback-after-performance.json`). Software rendering cannot measure real frame times, so 60 FPS on the development Mac is still not confirmed; the baseline there was already below 60 FPS.
+
 # Saved games
 
 A run is saved in the browser's local storage (`save-game.js`, key `sas-trials-save`), so closing the tab or browser does not lose it. It saves every 20 seconds while you play, when you pause, at each checkpoint you register, after sleeping, and when the page is hidden or closed. On the next visit the menu says CONTINUE EXERCISE with the saved time and next post.

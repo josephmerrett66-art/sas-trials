@@ -20,17 +20,19 @@ import {FrameMonitor} from './frame-monitor.js';
 import {GpuTimer} from './gpu-timer.js';
 import {ForestTorch,installTorchOptics} from './torch.js?v=daycycle-1';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=big-1';
-import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=big-1';
-import {HeldNavigation} from './held-navigation.js?v=baseplate-1';
-import {FieldKit} from './kit.js?v=bergen-1';
+import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=feedback-1';
+import {HeldNavigation} from './held-navigation.js?v=tremor-1';
+import {FieldKit} from './kit.js?v=pacing-1';
 import {findSprings,addSprings,nearbySpring,updateSpringVisibility} from './springs.js?v=big-1';
-import {PackingView} from './packing-view.js?v=bergen-1';
-import {InventoryView} from './inventory-view.js?v=bag-1';
+import {PackingView} from './packing-view.js?v=pacing-1';
+import {InventoryView} from './inventory-view.js?v=pacing-1';
 import {DayClock,formatClock} from './daycycle.js?v=1';
 import {Camp} from './camp.js?v=big-1';
 import {Wildlife} from './wildlife.js?v=big-1';
 import {nearbyObstacles} from './obstacle-grid.js';
-import {VitalsHud} from './vitals-hud.js?v=1';
+import {VitalsHud} from './vitals-hud.js?v=fade-1';
+import {lookTarget,needBands,needAdvice} from './fieldcraft.js?v=1';
+import {BodyCues,BodySounds} from './body-cues.js?v=1';
 import {snapshot,restore,readSave,writeSave,clearSave} from './save-game.js?v=1';
 
 const params=new URLSearchParams(location.search),benchmark=params.has('benchmark'),benchmarkLandmark=benchmark&&/^[B-H]$/.test(params.get('landmark')??'');
@@ -54,6 +56,8 @@ const kit=new FieldKit(),exercise=new NavigationExercise(points),view=new Naviga
 const heldNavigation=new HeldNavigation(camera,view.chart);
 const player=new Controller(terrainHeight,WORLD_SIZE/2-5),keys=new Set(),movementInput=new Set(),gamepad=new GamepadInput();
 const soundscape=new RecordedAudio();
+// Body cues and the inner voice: needs are felt and talked through before the bars matter.
+const bodyCues=new BodyCues(),bodySounds=new BodySounds(soundscape),blink=document.querySelector('#blink');let lastBands=null,lookLabel='',lookUsable=false;
 const feel=new MovementFeel(soundscape),lookSway=new LookSway(),lean=new PlayerLean();
 const hint=document.querySelector('.hint'),footer=document.querySelector('footer'),hud={bunny:document.querySelector('#bunny'),fps:document.querySelector('#fps')};
 let touch=null,inventory=null;
@@ -73,7 +77,7 @@ const lighting=params.get('lighting');setTimeMode(['cycle','day','night'].includ
 const forestShadowStats=bakeForestShadows(renderer,scene,sunlight,forestVisibility);sunlight.castShadow=clock.mode!=='night';let torchShown=null;
 const forestLife=new ForestLife(scene);const vitals=new VitalsHud();
 timeSetting.onchange=()=>setTimeMode(timeSetting.value);torchButton.onclick=()=>{torch.toggle();syncTorch();};
-function resetRun(forget=true){if(forget){clearSave();if(savedNote){savedNote='';hint.textContent=touch?.enabled?'Left joystick: move · Drag the scene: look · Tap Jump and hold Run':'Mouse + keyboard or Xbox controller';}}kit.reset();clock.reset();camp.reset();wildlife.reset();gathered.clear();duskWarned=-1;player.pace=1;packing?.update(false);play.firstChild.textContent='BEGIN EXERCISE ';player.reset();player.x=START.x;player.z=START.z;player.y=terrainHeight(player.x,player.z);feel.reset();lookSway.reset();lean.reset();exercise.reset();view.reset();lastY=player.y;keys.clear();accumulator=0;view.toggle('assignment');}
+function resetRun(forget=true){if(forget){clearSave();if(savedNote){savedNote='';hint.textContent=touch?.enabled?'Left joystick: move · Drag the scene: look · Tap Jump and hold Run':'Mouse + keyboard or Xbox controller';}}kit.reset();clock.reset();camp.reset();wildlife.reset();gathered.clear();bodyCues.reset();lastBands=null;duskWarned=-1;player.pace=1;packing?.update(false);play.firstChild.textContent='BEGIN EXERCISE ';player.reset();player.x=START.x;player.z=START.z;player.y=terrainHeight(player.x,player.z);feel.reset();lookSway.reset();lean.reset();exercise.reset();view.reset();lastY=player.y;keys.clear();accumulator=0;view.toggle('assignment');}
 let packing=null,duskWarned=-1,savedNote='';const gathered=new Set();const savedRun=benchmark||params.has('navtest')?null:readSave();resetRun(false);view.close();
 // Saved runs: the browser keeps one exercise in progress. It is written every 20 s of play,
 // on pause, after sleeping and when the tab is hidden or closed; Reset exercise deletes it.
@@ -104,20 +108,25 @@ document.addEventListener('mousemove',e=>{if(!locked||view.blocking)return;playe
 const riverProbe={};function nearRiver(){const q=riverAt(player.x,player.z,riverProbe);return !!q.river&&q.d<q.w+2.5&&player.y<q.S+1.5;}
 function nearWater(){return !!nearbySpring(springs,player)||nearRiver();}
 // Fieldcraft. Messages reuse the post notice line; the chart notes carry the totals.
-function say(text){exercise.message=text;exercise.messageTime=4;view.refreshNotes();}
+function say(text,time=4){exercise.message=text;exercise.messageTime=time;view.refreshNotes();}
 const forward=()=>({x:-Math.sin(player.yaw),z:-Math.cos(player.yaw)});
 function nearTree(){let best=null,bd=2.6;for(const o of nearbyObstacles(obstacles,player.x,player.z,bd,nearScratch)){if(o.height<4||gathered.has(o))continue;const d=Math.hypot(player.x-o.x,player.z-o.z)-o.radius;if(d<bd){bd=d;best=o;}}return best;}
 function rabbitInSight(){const f=forward();return wildlife.target(player,f.x,f.z);}
-// G does the most useful thing within reach: post, snare, fire, water, rabbit, then wood.
+// What the player is looking at decides what G (or a tap on the label on touch) does, and the
+// label under the crosshair says so. One reused object; worked out at the HUD rate and on G.
+const lookNear={reach:{}};
+function currentLook(){
+ const post=exercise.complete?null:exercise.nearby(player),snare=kit.packed?camp.nearSnare(player):null;
+ lookNear.post=post;lookNear.postReached=!!post&&exercise.checkpoints.indexOf(post)<exercise.stage;
+ if(!kit.packed){lookNear.snare=lookNear.fire=lookNear.rabbit=lookNear.tree=null;lookNear.water=false;}
+ else{lookNear.snare=snare;lookNear.snareCaught=!!snare&&clock.hours>=snare.catchAt;lookNear.fire=camp.lit&&camp.near(player)?camp.fire:null;lookNear.water=nearWater();lookNear.rabbit=rabbitInSight();lookNear.tree=nearTree();}
+ lookNear.sleepable=clock.mode!=='cycle'||clock.sleepable;
+ return lookTarget(player,kit,lookNear,touch?.enabled?'touch':controllerMode?'pad':'keyboard');
+}
 function interact(){
- if(registerPost())return;
- if(!kit.packed)return;
- if(camp.nearSnare(player))return liftSnare();
- if(camp.lit&&camp.near(player)&&kit.wood>0)return stokeFire();
- if(nearWater())return fill();
- if(rabbitInSight())return throwStick();
- if(nearTree())return gatherWood();
- if(camp.lit&&camp.near(player)){say('No wood to add. Gather dead wood under the trees.');}
+ const target=currentLook();
+ if(target?.act)return fieldActions[target.act]();
+ if(kit.packed&&camp.lit&&camp.near(player)&&!kit.wood)say('No wood to add. Gather dead wood beside the big trees.');
 }
 function fire(){
  if(!kit.packed)return;
@@ -146,17 +155,10 @@ function sleep(){
  if(slept>0){clock.advance(slept);camp.burn(slept,weather.state.rain);sleepFade.querySelector('p').textContent=`${clock.label} · ${kit.message}`;sleepFade.hidden=false;sleepFade.classList.remove('waking');void sleepFade.offsetWidth;sleepFade.classList.add('waking');sleepTime=3.2;view.drawMap();saveGame();}
  say(kit.message);
 }
-// Context hint under the crosshair, refreshed with the HUD.
-function fieldPrompt(){
- if(!kit.packed||!active)return '';
- if(camp.nearSnare(player))return 'Snare · G / Xbox X to lift';
- if(camp.lit&&camp.near(player))return `Campfire · F / RT cook${kit.wood?' · G add wood':''}${clock.mode!=='cycle'||clock.sleepable?' · Z / LT sleep':''}`;
- if(nearWater())return 'Water · G / Xbox X to fill bottles';
- if(rabbitInSight())return 'Rabbit · G / Xbox X to throw your stick';
- return '';
-}
 function drink(){kit.drink();say(kit.message);}
 function eat(kind=null){kit.eat(kind);say(kit.message);}
+const fieldActions={register:registerPost,lift:liftSnare,stoke:stokeFire,cook:cookFood,fill,throw:throwStick,gather:gatherWood};
+view.prompt.onclick=()=>{if(touch?.enabled&&active)interact();};
 function tool(name){feel.unlockAudio();if(name==='interact')interact();else view.toggle(name);keys.clear();touch?.reset();}
 for(const button of document.querySelectorAll('[data-tool]'))button.onclick=()=>tool(button.dataset.tool);
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>view.close();
@@ -165,7 +167,7 @@ document.addEventListener('keydown',e=>{if(inventory?.open&&active){if(e.code===
 document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);});
 touch=createTouchControls(renderer.domElement,{enabled:matchMedia('(any-pointer: coarse)').matches||params.has('touch'),canMove:()=>active&&!view.blocking&&!inventory?.open,look:(x,y)=>{player.yaw-=x*.004;player.pitch=THREE.MathUtils.clamp(player.pitch-y*.004,-Math.PI/2+.01,Math.PI/2-.01);},jump:()=>player.jumpBuffer=player.time+.12,pause});
-inventory=new InventoryView(kit,{enabled:touch.enabled,near:()=>({water:nearWater(),wet:nearRiver(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable}),actions:{drink,'eat-ration':()=>eat('ration'),'eat-cooked':()=>eat('cooked'),'eat-raw':()=>eat('raw'),fill,register:registerPost,gather:gatherWood,light:lightFire,stoke:stokeFire,cook:cookFood,snare,lift:liftSnare,throw:throwStick,sleep},onClose:closeBag});
+inventory=new InventoryView(kit,{enabled:touch.enabled,near:()=>({water:nearWater(),wet:nearRiver(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable}),actions:{...fieldActions,drink,'eat-ration':()=>eat('ration'),'eat-cooked':()=>eat('cooked'),'eat-raw':()=>eat('raw'),light:lightFire,snare,sleep},onClose:closeBag});
 if(touch.enabled)hint.textContent=(savedNote?savedNote+' · ':'')+'Left joystick: move · Drag the scene: look · Tap Jump and hold Run';
 const graphics=renderer.getContext(),gpuTimer=new GpuTimer(graphics),adapterExtension=graphics.getExtension('WEBGL_debug_renderer_info'),adapter=adapterExtension?graphics.getParameter(adapterExtension.UNMASKED_RENDERER_WEBGL):graphics.getParameter(graphics.RENDERER),frameMonitor=new FrameMonitor();
 let benchmarkStart=0,benchmarkDone=false,benchmarkWarm=false,benchmarkProbe=false,benchmarkResult=null;
@@ -190,10 +192,11 @@ renderer.setAnimationLoop(now=>{
   const wade=riverAt(player.x,player.z,riverProbe),depth=wade.river&&wade.d<wade.w+1?Math.max(0,wade.S-player.y):0;
   if(!benchmark)clock.step(dt);
   kit.step(dt,{effort:Math.min(1.7,speed/(player.config.walk*Math.max(.1,player.pace))),climb,rain:weather.state.rain,hours:benchmark?0:dt/60,dark:clock.darkness,sun:clock.daylight*(1-weather.state.cloud),fire:camp.warming(player),soaked:depth>.35});
+  {const cue=bodyCues.step(benchmark?0:dt,kit);if(cue.growl)bodySounds.play('growl');if(cue.swallow)bodySounds.play('swallow');if(cue.chatter)bodySounds.play('chatter');if(cue.blink){blink.classList.remove('on');void blink.offsetWidth;blink.classList.add('on');}}
   if(clock.mode==='cycle'&&clock.hour>=19.5&&clock.hour<20&&duskWarned!==clock.day){duskWarned=clock.day;say('Dusk is coming. Gather wood and make camp.');}player.pace=kit.pace*(1-.45*Math.min(1,depth/.9));if(kit.withdrawn){pause();play.firstChild.textContent='REPACK AND RESTART ';}}else {player.vx=player.vz=0;feel.step(0,player,player.config.juice);exercise.messageTime=Math.max(0,exercise.messageTime-dt);}
  const physicsEnd=performance.now(),motion=feel.output,lookMotion=lookSway.step(dt,active&&!view.blocking?(pad?.look.x??0):0,active&&!view.blocking?(pad?.look.y??0):0,player.config.juice,0),leanMotion=lean.step(dt,active&&!view.blocking?leanInput(keys,pad):0,player,obstacles);
- camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);heldNavigation.update(player,active&&!view.blocking?dt:0,feel,active);torch.setDark(clock.darkness);torch.step(active?dt:0,player);{const show=clock.darkness>.35;if(show!==torchShown){torchShown=show;torchButton.hidden=!show;}}camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,clock.darkness,torch.on,sunlight,hemisphere,forestVisibility,clock.dusk);river.step(dt);camp.step(active?dt:0,clock.hours,{dark:clock.darkness,rain:weather.state.rain,camera,range:scene.fog.far});wildlife.step(dt,player,{activity:Math.min(1,.3+.3*clock.daylight+.5*clock.dusk),active:active&&!view.blocking&&kit.packed});if(sleepTime>0){sleepTime-=dt;if(sleepTime<=0)sleepFade.hidden=true;}soundscape.step(dt,weather.state.rain,weather.volume);forestLife.step(dt,active&&!view.blocking,camera,weather.state,torch.dark);
- frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);if(!view.prompt.textContent)view.prompt.textContent=fieldPrompt();view.refreshNotes();vitals.update(kit.packed,kit,player);if(active&&(saveTimer+=.1)>=20){saveTimer=0;saveGame();}packing.update(active);inventory.render();hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
+ camera.position.set(player.x+Math.cos(player.yaw)*(motion.x+lookMotion.x)+leanMotion.x,player.y+player.eye+motion.y+lookMotion.y+leanMotion.y,player.z-Math.sin(player.yaw)*(motion.x+lookMotion.x)+leanMotion.z);camera.rotation.set(player.pitch+motion.pitch,player.yaw,motion.roll+lookMotion.roll+leanMotion.roll);heldNavigation.update(player,active&&!view.blocking?dt:0,feel,active,bodyCues.tremor);torch.setDark(clock.darkness);torch.step(active?dt:0,player);{const show=clock.darkness>.35;if(show!==torchShown){torchShown=show;torchButton.hidden=!show;}}camera.fov+=(player.config.fov+motion.fov-camera.fov)*(1-Math.exp(-8*dt));camera.updateProjectionMatrix();weather.step(dt,active,clock.darkness,torch.on,sunlight,hemisphere,forestVisibility,clock.dusk);river.step(dt);camp.step(active?dt:0,clock.hours,{dark:clock.darkness,rain:weather.state.rain,camera,range:scene.fog.far});wildlife.step(dt,player,{activity:Math.min(1,.3+.3*clock.daylight+.5*clock.dusk),active:active&&!view.blocking&&kit.packed});if(sleepTime>0){sleepTime-=dt;if(sleepTime<=0)sleepFade.hidden=true;}soundscape.step(dt,weather.state.rain,weather.volume);forestLife.step(dt,active&&!view.blocking,camera,weather.state,torch.dark);
+ frameAverage+=(Math.max(.001,frameMs/1000)-frameAverage)*.06;lastFrame=now;hudTime+=dt;if(hudTime>=.1){hudTime=0;view.update(player);{const look=active?currentLook():null,label=look?.label??'',usable=!!look?.act;if(label!==lookLabel){lookLabel=label;view.prompt.textContent=label;}if(usable!==lookUsable){lookUsable=usable;view.prompt.classList.toggle('usable',usable);}}if(active&&kit.packed){const advice=needAdvice(kit,lastBands);if(advice)say(advice,7);lastBands=needBands(kit,lastBands??{});}else lastBands=null;view.refreshNotes();vitals.update(kit.packed,kit,player);if(active&&(saveTimer+=.1)>=20){saveTimer=0;saveGame();}packing.update(active);inventory.render();hud.fps.textContent=`${Math.round(1/frameAverage)} FPS`;}
  const updateEnd=performance.now();for(const post of checkpointPosts){const dx=post.position.x-camera.position.x,dz=post.position.z-camera.position.z;post.visible=dx*dx+dz*dz<(scene.fog.far+4)**2;}updateSpringVisibility(springMeshes,springs,camera,scene.fog.far+4);// A jump of more than 40 m (restart, test teleport) loads the new area at once; walking streams it.
  if(Math.hypot(player.x-streamPosition.x,player.z-streamPosition.z)>40)forestStream.loadAround(player.x,player.z);else forestStream.update(player.x,player.z);streamPosition.x=player.x;streamPosition.z=player.z;
  if(forestStream.version!==forestStream.bakedVersion&&!forestStream.building&&sunlight.castShadow&&now-shadowBakeAt>1500){shadowBakeAt=now;bakeForestShadows(renderer,scene,sunlight,forestVisibility);}

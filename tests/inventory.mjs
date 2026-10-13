@@ -18,7 +18,7 @@ for(const id of ['gather','light','fill','throw','lift','sleep'])assert.equal(ac
 assert.equal(backpackRows(kit,{wet:true}).flatMap(r=>r.actions).find(a=>a.act==='light').enabled,false,'no fires in the river');
 kit.raw=1;rows=backpackRows(kit,{fire:true});assert.equal(act(rows,'cook').enabled,true);assert.equal(act(rows,'stoke').enabled,true);assert.equal(act(rows,'light'),undefined,'a lit fire is stoked, not lit');
 // Choosing what to eat.
-kit.cooked=1;kit.energy=10;assert.equal(kit.eat('ration'),true);assert.equal(kit.cooked,1,'eating a ration keeps the cooked rabbit');assert.equal(kit.rations,1);
-assert.equal(kit.eat('raw'),true);assert.equal(kit.raw,0);assert.equal(kit.rations,1);assert.equal(kit.cooked,1,'eating raw keeps rations and cooked meat');
+kit.cooked=1;kit.energy=10;assert.equal(kit.eat('ration'),true);assert.equal(kit.cooked,1,'eating a ration keeps the cooked rabbit');assert.equal(kit.rations,0);
+assert.equal(kit.eat('raw'),true);assert.equal(kit.raw,0);assert.equal(kit.rations,0);assert.equal(kit.cooked,1,'eating raw keeps rations and cooked meat');
 assert.equal(kit.eat('cooked'),true);assert.equal(kit.cooked,0);assert.equal(kit.eat('cooked'),false);assert.equal(kit.eat('raw'),false);
 console.log('Passed backpack rows for every survival action, context-dependent availability and choosing what to eat.');

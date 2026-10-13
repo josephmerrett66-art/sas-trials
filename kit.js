@@ -3,7 +3,7 @@ import {BergenGrid} from './bergen-grid.js?v=1';
 export const BASE_WEIGHT=6; // bergen, clothing, map, compass and torch
 export const ITEMS=[
  {id:'water',name:'Water bottle (1 L, full)',note:'Drink on the move. Refill at springs and rivers.',weight:1.15,max:6,start:2},
- {id:'rations',name:'Ration pack',note:'Restores energy.',weight:.6,max:6,start:2},
+ {id:'rations',name:'Ration pack',note:'Restores energy. Hunt to make them last.',weight:.6,max:6,start:1},
  {id:'filter',name:'Water filter',note:'Spring water is safe to drink.',weight:.3,max:1,start:1},
  {id:'waterproof',name:'Waterproof jacket',note:'Rain no longer saps your energy.',weight:1.1,max:1,start:0},
  {id:'stove',name:'Stove and mess tin',note:'Hot rations restore more energy. Boil water at a fire.',weight:1.4,max:1,start:0},
@@ -14,7 +14,7 @@ export const ITEMS=[
 export const LITRE=1,BOTTLE_EMPTY=.15,RATION_WEIGHT=.6,WOOD_WEIGHT=.8,MEAT_WEIGHT=.5,MAX_WOOD=5;
 // Hours of burn per bundle of firewood, and how long a fire may be stocked for.
 export const BURN_PER_WOOD=1.5,MAX_FUEL=8;
-const THIRST_SECONDS=14*60,HUNGER_SECONDS=28*60,WITHDRAW_SECONDS=60,SICK_SECONDS=180,DRINK=.5;
+const THIRST_SECONDS=14*60,HUNGER_SECONDS=20*60,WITHDRAW_SECONDS=60,SICK_SECONDS=180,DRINK=.5;
 export const defaultLoadout=()=>Object.fromEntries(ITEMS.map(item=>[item.id,item.start]));
 export function packWeight(loadout){return BASE_WEIGHT+ITEMS.reduce((sum,item)=>sum+item.weight*(loadout[item.id]??0),0);}
 // Light loads walk at full pace; every kilogram past 8 kg costs about 3%, down to 60%.
@@ -66,10 +66,10 @@ export class FieldKit {
   const rawOnly=kind==='raw'||(this.cooked<=0&&this.rations<=0);
   if(kind==='ration'&&this.rations<=0){this.message='No rations left.';return false;}
   if(kind==='cooked'&&this.cooked<=0){this.message='No cooked meat.';return false;}
-  if(!rawOnly&&this.cooked>0&&kind!=='ration'){this.cooked--;this.energy=Math.min(100,this.energy+45);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
-  if(rawOnly&&this.raw>0){this.raw--;this.energy=Math.min(100,this.energy+20);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
+  if(!rawOnly&&this.cooked>0&&kind!=='ration'){this.cooked--;this.energy=Math.min(100,this.energy+45);this.warmth=Math.min(100,this.warmth+10);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
+  if(rawOnly&&this.raw>0){this.raw--;this.energy=Math.min(100,this.energy+15);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
   if(this.rations<=0){this.message='No food left.';return false;}
-  this.rations--;const hot=this.has('stove');this.energy=Math.min(100,this.energy+(hot?55:35));
+  this.rations--;const hot=this.has('stove');this.energy=Math.min(100,this.energy+(hot?45:30));
   this.message=`${hot?'Hot ration':'Cold ration'} eaten · ${this.rations} left`;return true;
  }
  refill(){
