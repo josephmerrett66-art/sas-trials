@@ -1,3 +1,9 @@
+# Condition bars always on screen
+
+The health, stamina, food and water bars in the bottom-left corner now stay on screen the whole time you play. Before, they faded out whenever every bar was above 60, so at the start of a run they were invisible. Bars under 25 still turn red. Screenshot: `artifacts/vitals-always-on.png`.
+
+Checks: all node tests pass. In the browser the panel is visible at full opacity with full bars, and there are no errors. This removes a fade and adds nothing drawn, so the performance stress test was not rerun.
+
 # Xbox controller layout
 
 The controller now works like this, and no button does anything blind:

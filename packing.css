@@ -65,7 +65,6 @@ body.touch-mode #kit-sheet button{min-height:44px}
 /* Condition bars, bottom left. */
 #vitals{position:fixed;z-index:30;left:max(22px,env(safe-area-inset-left));bottom:calc(22px + env(safe-area-inset-bottom));width:168px;display:grid;gap:6px;padding:10px 12px;background:#18221bb8;border:1px solid #e1ecc22e;border-radius:6px;pointer-events:none;font:600 9px/1 'DM Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#d8e2c8}
 body:not(.playing) #vitals{display:none}
-#vitals{transition:opacity 1.2s ease}#vitals.quiet{opacity:0}
 .vital{display:grid;grid-template-columns:52px 1fr;align-items:center;gap:8px}
 .vital i{display:block;height:5px;background:#0d140f99;border-radius:3px;overflow:hidden}
 .vital b{display:block;height:100%;transform-origin:left;transform:scaleX(1);transition:transform .25s linear;border-radius:3px}

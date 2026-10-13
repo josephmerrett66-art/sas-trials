@@ -32,7 +32,7 @@ import {Wildlife} from './wildlife.js?v=warrens-1';
 import {ForestFloor} from './forest-floor.js?v=fire-1';
 import {findWarrens,nearestWarren,WarrenView,ON_RUN_ODDS,OFF_RUN_ODDS} from './warrens.js?v=1';
 import {nearbyObstacles} from './obstacle-grid.js';
-import {VitalsHud} from './vitals-hud.js?v=fade-1';
+import {VitalsHud} from './vitals-hud.js?v=bars-1';
 import {lookTarget,needBands,needAdvice} from './fieldcraft.js?v=pad-1';
 import {BodyCues,BodySounds} from './body-cues.js?v=orders-1';
 import {snapshot,restore,readSave,writeSave,clearSave} from './save-game.js?v=orders-1';

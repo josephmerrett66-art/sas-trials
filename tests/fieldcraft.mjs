@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import {facing,lookTarget,needAdvice,needBands} from '../fieldcraft.js';
 import {BodyCues} from '../body-cues.js';
-import {vitalsWanted} from '../vitals-hud.js';
 import {FieldKit,TIRED_HOURS} from '../kit.js';
 
 // Facing: yaw 0 looks along -z. Things behind or to the side are not looked at unless very close.
@@ -82,7 +81,3 @@ fine.warmth=100;fine.awake=TIRED_HOURS+5;let blinks=0;for(let i=0;i<240;i++)if(b
 fine.withdrawn='Exhaustion';assert.equal(body.step(.5,fine).blink,false,'nothing after withdrawing');
 console.log('Passed body cues: quiet when comfortable, growls, tremor, chattering and blinks.');
 
-// Condition bars fade in below 60 and out again above 65.
-assert.equal(vitalsWanted({a:100,b:62},false),false);assert.equal(vitalsWanted({a:100,b:59},false),true);
-assert.equal(vitalsWanted({a:100,b:62},true),true,'stays up until comfortably clear');assert.equal(vitalsWanted({a:100,b:66},true),false);
-console.log('Passed condition bar fade thresholds.');
