@@ -1,6 +1,6 @@
-import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=pacing-1';
-import {BergenView} from './bergen-view.js?v=1';
-import {SHAPES} from './bergen-grid.js?v=1';
+import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=sticks-1';
+import {BergenView} from './bergen-view.js?v=sticks-1';
+import {SHAPES} from './bergen-grid.js?v=sticks-1';
 
 // Kit list before the exercise, condition notes on the pause menu, and the strain vignette.
 export class PackingView {
@@ -8,7 +8,7 @@ export class PackingView {
   this.kit=kit;this.clock=clock;this.menu=document.querySelector('#menu');this.panel=document.querySelector('#packing');this.condition=document.querySelector('#condition');this.vignette=document.querySelector('#strain');this.lastStrain=-1;
   // The kit list is a tray beside the bergen: drag (or tap) an item into a space where it fits.
   const list=this.panel.querySelector('#kit-list');
-  list.innerHTML=`<li class="fixed"><span><strong>Bergen, clothing, map, compass, torch</strong><small>Always carried.</small></span><span class="kg">${BASE_WEIGHT.toFixed(1)} kg</span></li>`+ITEMS.map(item=>`<li data-item="${item.id}"><button type="button" class="tray-item" data-add="${item.id}" aria-label="Pack ${item.name}"><i class="shape" style="--w:${SHAPES[item.id][0]};--h:${SHAPES[item.id][1]}" data-kind="${item.id}"></i><span><strong>${item.name}</strong><small>${item.note}</small></span></button><span class="kg">${item.weight.toFixed(item.weight<1?2:1)} kg</span><span class="count"><output></output><button type="button" data-remove aria-label="Unpack one ${item.name}">−</button></span></li>`).join('');
+  list.innerHTML=`<li class="fixed"><span><strong>Bergen, clothing, map, compass, torch, knife</strong><small>Always carried.</small></span><span class="kg">${BASE_WEIGHT.toFixed(1)} kg</span></li>`+ITEMS.map(item=>`<li data-item="${item.id}"><button type="button" class="tray-item" data-add="${item.id}" aria-label="Pack ${item.name}"><i class="shape" style="--w:${SHAPES[item.id][0]};--h:${SHAPES[item.id][1]}" data-kind="${item.id}"></i><span><strong>${item.name}</strong><small>${item.note}</small></span></button><span class="kg">${item.weight.toFixed(item.weight<1?2:1)} kg</span><span class="count"><output></output><button type="button" data-remove aria-label="Unpack one ${item.name}">−</button></span></li>`).join('');
   for(const button of list.querySelectorAll('[data-remove]'))button.onclick=()=>{const id=button.closest('li').dataset.item;kit.set(id,kit.loadout[id]-1);this.bergen.render();this.render();};
   this.bergen=new BergenView(this.panel.querySelector('#bergen-space'),kit.bergen,{tray:list,cell:matchMedia('(max-width:600px)').matches?36:42,canAdd:id=>kit.loadout[id]<ITEMS.find(i=>i.id===id).max,onChange:()=>this.render()});
   this.panel.querySelector('#step-off').onclick=()=>{this.hide();onStepOff();};

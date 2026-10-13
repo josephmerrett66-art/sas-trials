@@ -84,7 +84,7 @@ body.touch-mode #vitals{bottom:calc(166px + env(safe-area-inset-bottom))}
 .bergen-item.ghost{pointer-events:none;opacity:.85;box-shadow:0 0 0 2px #e9f0c0;z-index:3;transition:none}
 .bergen-item.ghost.blocked{box-shadow:0 0 0 2px #e0573c;opacity:.6}
 .bergen.holding .bergen-item:not(.ghost){cursor:copy}
-[data-kind=water]{--c:#5f8aa0}[data-kind=rations]{--c:#a8874a}[data-kind=filter]{--c:#6f8f86}[data-kind=waterproof]{--c:#3f5a4a}[data-kind=stove]{--c:#6d6f72}[data-kind=firesteel]{--c:#8e3e2d}[data-kind=bedroll]{--c:#5b6a3c}[data-kind=snares]{--c:#8c8467}[data-kind=wood]{--c:#7a5536}[data-kind=raw]{--c:#a0645a}[data-kind=cooked]{--c:#8a5a33}
+[data-kind=water]{--c:#5f8aa0}[data-kind=rations]{--c:#a8874a}[data-kind=filter]{--c:#6f8f86}[data-kind=waterproof]{--c:#3f5a4a}[data-kind=stove]{--c:#6d6f72}[data-kind=firesteel]{--c:#8e3e2d}[data-kind=bedroll]{--c:#5b6a3c}[data-kind=snares]{--c:#8c8467}[data-kind=wood]{--c:#7a5536}[data-kind=raw]{--c:#a0645a}[data-kind=cooked]{--c:#8a5a33}[data-kind=branch]{--c:#6f5a3e}[data-kind=stick]{--c:#9a7a4f}
 .bergen-tools{display:flex;align-items:center;gap:10px;margin-top:8px;min-height:30px;font-size:11px;color:#62664d}
 .bergen-tools button{min-height:30px;padding:0 10px;border-radius:3px;background:#334034;color:#f4eddc;font:600 11px 'DM Sans',sans-serif;border:0}
 .bergen-tools button:disabled{opacity:.3}

@@ -1,8 +1,8 @@
 // The bergen as a physical space: a grid of cells, and every item a block that must fit.
 // Pure state, testable in node. Sizes are cells wide × tall when not turned.
 export const COLS=6,ROWS=7;
-export const SHAPES={water:[1,2],rations:[2,1],filter:[1,1],waterproof:[3,2],stove:[2,2],firesteel:[1,1],bedroll:[2,4],snares:[1,1],wood:[1,3],raw:[2,1],cooked:[2,1]};
-export const LABELS={water:'Water',rations:'Ration',filter:'Filter',waterproof:'Jacket',stove:'Stove',firesteel:'Steel',bedroll:'Sleeping bag',snares:'Snare',wood:'Wood',raw:'Rabbit',cooked:'Cooked'};
+export const SHAPES={water:[1,2],rations:[2,1],filter:[1,1],waterproof:[3,2],stove:[2,2],firesteel:[1,1],bedroll:[2,4],snares:[1,1],wood:[1,3],raw:[2,1],cooked:[2,1],branch:[1,3],stick:[1,3]};
+export const LABELS={water:'Water',rations:'Ration',filter:'Filter',waterproof:'Jacket',stove:'Stove',firesteel:'Steel',bedroll:'Sleeping bag',snares:'Snare',wood:'Wood',raw:'Rabbit',cooked:'Cooked',branch:'Branch',stick:'Stick'};
 
 export class BergenGrid {
  constructor(cols=COLS,rows=ROWS){this.cols=cols;this.rows=rows;this.items=[];this.next=1;}
@@ -25,6 +25,8 @@ export class BergenGrid {
  removeOne(id){for(let i=this.items.length-1;i>=0;i--)if(this.items[i].id===id){this.items.splice(i,1);return true;}return false;}
  count(id){let n=0;for(const o of this.items)if(o.id===id)n++;return n;}
  setCount(id,n){while(this.count(id)>n)this.removeOne(id);while(this.count(id)<n)if(!this.autoPlace(id))return false;return true;}
+ // Changes the most recently packed one of a kind into another of the same shape.
+ convertOne(from,to){for(let i=this.items.length-1;i>=0;i--)if(this.items[i].id===from){this.items[i].id=to;return true;}return false;}
  convert(from,to){let n=0;for(const o of this.items)if(o.id===from){o.id=to;n++;}return n;}
  // Whether all of these would fit at once without moving anything.
  roomFor(ids){const trial=this.copy();return ids.every(id=>trial.autoPlace(id));}

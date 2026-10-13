@@ -1,6 +1,6 @@
-import {BergenGrid} from './bergen-grid.js?v=1';
+import {BergenGrid} from './bergen-grid.js?v=sticks-1';
 // Bergen packing and field condition. Pure state: no DOM or rendering, so it can be tested in node.
-export const BASE_WEIGHT=6; // bergen, clothing, map, compass and torch
+export const BASE_WEIGHT=6; // bergen, clothing, map, compass, torch and knife
 export const ITEMS=[
  {id:'water',name:'Water bottle (1 L, full)',note:'Drink on the move. Refill at springs and rivers.',weight:1.15,max:6,start:2},
  {id:'rations',name:'Ration pack',note:'Restores energy. Hunt to make them last.',weight:.6,max:6,start:1},
@@ -11,7 +11,7 @@ export const ITEMS=[
  {id:'bedroll',name:'Sleeping bag and bivvy',note:'Sleep warm without a fire.',weight:1.8,max:1,start:0},
  {id:'snares',name:'Snare wire',note:'Set a snare and come back for a rabbit.',weight:.1,max:4,start:2}
 ];
-export const LITRE=1,BOTTLE_EMPTY=.15,RATION_WEIGHT=.6,WOOD_WEIGHT=.8,MEAT_WEIGHT=.5,MAX_WOOD=5;
+export const LITRE=1,BOTTLE_EMPTY=.15,RATION_WEIGHT=.6,WOOD_WEIGHT=.8,MEAT_WEIGHT=.5,MAX_WOOD=5,BRANCH_WEIGHT=.35;
 // Hours of burn per bundle of firewood, and how long a fire may be stocked for.
 export const BURN_PER_WOOD=1.5,MAX_FUEL=8;
 const THIRST_SECONDS=14*60,HUNGER_SECONDS=20*60,WITHDRAW_SECONDS=60,SICK_SECONDS=180,DRINK=.5;
@@ -42,12 +42,14 @@ export class FieldKit {
  get wood(){return this.bergen.count('wood');}set wood(n){this.bergen.setCount('wood',n);}
  get raw(){return this.bergen.count('raw');}set raw(n){this.bergen.setCount('raw',n);}
  get cooked(){return this.bergen.count('cooked');}set cooked(n){this.bergen.setCount('cooked',n);}
+ get branches(){return this.bergen.count('branch');}set branches(n){this.bergen.setCount('branch',n);}
+ get sticks(){return this.bergen.count('stick');}set sticks(n){this.bergen.setCount('stick',n);}
  roomFor(ids){return this.bergen.roomFor(ids);}
  get bottles(){return this.loadout.water;}
  has(id){return (this.loadout[id]??0)>0;}
  pack(){this.layout=this.bergen.save();this.packed=true;this.water=this.bottles*LITRE;this.untreated=0;this.message=`Packed ${this.weight.toFixed(1)} kg`;}
  // Live weight falls as water is drunk and rations are eaten.
- get weight(){if(!this.packed)return packWeight(this.loadout);return BASE_WEIGHT+this.bottles*BOTTLE_EMPTY+this.water+this.rations*RATION_WEIGHT+this.wood*WOOD_WEIGHT+(this.raw+this.cooked)*MEAT_WEIGHT+ITEMS.filter(i=>!['water','rations'].includes(i.id)).reduce((sum,i)=>sum+i.weight*this.loadout[i.id],0);}
+ get weight(){if(!this.packed)return packWeight(this.loadout);return BASE_WEIGHT+this.bottles*BOTTLE_EMPTY+this.water+this.rations*RATION_WEIGHT+this.wood*WOOD_WEIGHT+(this.raw+this.cooked)*MEAT_WEIGHT+(this.branches+this.sticks)*BRANCH_WEIGHT+ITEMS.filter(i=>!['water','rations'].includes(i.id)).reduce((sum,i)=>sum+i.weight*this.loadout[i.id],0);}
  get pace(){return loadPace(this.weight)*Math.min(conditionPace(this.hydration),conditionPace(this.energy),conditionPace(this.warmth))*fatiguePace(this.awake);}
  drink(){
   if(!this.packed||this.withdrawn)return false;
@@ -115,6 +117,21 @@ export class FieldKit {
  // Checking a snare always recovers the wire; it may hold a rabbit.
  recoverSnare(caught){this.bergen.autoPlace('snares');if(caught)this.bergen.autoPlace('raw');this.message=caught?'A rabbit in the snare. Cook it at a fire.':'Nothing yet. Snare lifted.';}
  catchRabbit(){this.bergen.autoPlace('raw');this.message='Your throwing stick drops a rabbit. Cook it at a fire.';}
+ // The hunting chain: pick up a fallen branch, whittle it with your knife, throw it, fetch it.
+ takeBranch(){
+  if(!this.packed||this.withdrawn)return false;
+  if(!this.bergen.autoPlace('branch')){this.message='No room in your bergen for a branch. Rearrange it (Tab) first.';return false;}
+  this.message=this.sticks?'Picked up a dry branch. It will burn.':'Picked up a straight branch. Whittle it into a throwing stick.';return true;
+ }
+ whittle(){
+  if(!this.packed||this.withdrawn)return false;
+  if(!this.bergen.convertOne('branch','stick')){this.message='No branch to whittle. Look under the trees.';return false;}
+  this.message='Whittled a throwing stick. Creep up on a rabbit, then hold to aim.';return true;
+ }
+ // A thrown stick leaves the bergen until you pick it up again.
+ throwStick(){if(!this.packed||this.withdrawn||!this.bergen.removeOne('stick'))return false;return true;}
+ pickUpStick(){if(!this.packed||this.withdrawn)return false;if(!this.bergen.autoPlace('stick')){this.message='No room in your bergen for the stick. Rearrange it (Tab) first.';return false;}this.message='Got your throwing stick back.';return true;}
+ pickUpRabbit(){if(!this.packed||this.withdrawn)return false;if(!this.bergen.autoPlace('raw')){this.message='No room in your bergen for the rabbit. Rearrange it (Tab) or eat something first.';return false;}this.message='Rabbit in the bergen. Cook it at a fire before you eat it.';return true;}
  // Sleep through the night. Returns the hours actually slept (a fire that dies, or no
  // shelter, wakes you early). fire: hours of fuel left; rain: 0..1.
  sleep(hours,{fire=0,rain=0}={}){

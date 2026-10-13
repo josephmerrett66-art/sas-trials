@@ -1,5 +1,5 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD} from './kit.js?v=pacing-1';
-import {BergenView} from './bergen-view.js?v=1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD} from './kit.js?v=sticks-1';
+import {BergenView} from './bergen-view.js?v=sticks-1';
 
 // What the backpack shows: each thing you carry with what you can do with it here and now.
 // Pure data so it can be tested without a page. near: what is within reach of the player.
@@ -12,7 +12,8 @@ export function backpackRows(kit,near){
  row('rabbit','Rabbit',`${kit.cooked} cooked · ${kit.raw} raw`,[['eat-cooked','Eat cooked',kit.cooked>0],['cook',fire?'Cook':'Cook at a fire',fire&&(kit.raw>0||(kit.untreated>.001&&kit.has('stove')))],['eat-raw','Eat raw',kit.raw>0]]);
  row('wood','Dead wood',`${kit.wood} of ${MAX_WOOD} bundles${tree?' · dead wood here':''}`,[['gather',tree?'Gather':'No dead wood near',tree&&kit.wood<MAX_WOOD],fire?['stoke','Add to fire',kit.wood>0]:['light',wet?'Too wet here':'Light fire',!wet&&kit.wood>=2&&kit.has('firesteel')]]);
  row('snares','Snare wire',`${kit.snares} left${snare?' · snare here':''}`,[['snare','Set snare',kit.snares>0&&!wet],['lift','Lift snare',!!snare]]);
- row('stick','Throwing stick',rabbit?'A rabbit in front of you':'Face a rabbit within 12 m',[['throw','Throw',rabbit]]);
+ const sticks=`${kit.sticks} stick${kit.sticks===1?'':'s'} · ${kit.branches} branch${kit.branches===1?'':'es'}`;
+ row('stick','Throwing stick',kit.sticks?`${sticks}${rabbit?' · a rabbit in front of you':''}`:kit.branches?`${sticks} · whittle one with your knife`:'Find a straight branch under the trees',[['whittle','Whittle',kit.branches>0],['throw','Throw',rabbit&&kit.sticks>0]]);
  row('sleep',kit.has('bedroll')?'Sleeping bag':'Sleep',sleepable?(fire?'By the fire':kit.has('bedroll')?'In your bag':'Needs a fire or a sleeping bag'):'Make camp after 19:30',[['sleep','Sleep',sleepable]]);
  return rows;
 }

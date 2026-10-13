@@ -1,4 +1,4 @@
-import {BergenGrid,LABELS} from './bergen-grid.js?v=1';
+import {BergenGrid,LABELS} from './bergen-grid.js?v=sticks-1';
 
 // Draws the bergen grid and lets you move blocks around it.
 // Mouse or touch: drag a block (or tap it, then tap where it goes). R, right click or the

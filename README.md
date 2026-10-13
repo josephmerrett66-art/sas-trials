@@ -1,3 +1,16 @@
+# The hunt: branch, knife, throwing stick (overhaul phase 2)
+
+You no longer start with a throwing stick. You make one.
+
+- **Fallen branches** lie under about 45% of the big trees, in pale weathered timber so they show in the grass (`forest-floor.js`). Each tree always drops the same branch in the same place, a branch you take stays gone, and the save remembers it. Look at one: "Pick up branch · G". Branches go in the bergen as 1×3 blocks.
+- **Whittling:** you always carry a knife now. With a branch and no stick, the label offers "Whittle stick · hold G" alongside whatever you are looking at (or "Whittle a throwing stick from your branch · G" when you're looking at nothing). Whittling takes about 2.5 seconds with the stick in your right hand in place of the map; moving off or pressing G again stops it. The bag has a Whittle button too.
+- **Throwing:** look at a rabbit within 12 m: "Throw stick at rabbit · hold G" (hold X on Xbox, tap on touch). Holding draws the stick back; holding for 0.6 seconds or more is a steady throw (+10% to hit), a snatched throw is −10%. The stick flies in a short arc. A hit drops the rabbit where it sat ("Pick up rabbit · G"); a miss sends it running. Either way the stick lies where it landed until you fetch it ("Pick up your stick · G").
+- **Without a stick** the rabbit label says what to do: find a straight branch, or whittle the one you have. The hunger advice follows the same chain.
+
+Checks: all node tests pass, with the new tests/forest-floor.mjs covering fixed branch spots, the instanced floor, taking, whittling, the thrown stick's flight and landing, rabbits on the ground, bounded pools, aim affecting the throw, and saving and restoring the floor (older saves load with a fresh floor). tests/fieldcraft.mjs covers the new labels. Browser-played start to finish: walk to a branch, pick it up, hold G to whittle, aim at a grazing rabbit, release, pick up the rabbit and the stick. Screenshots: `artifacts/survival-hunt-whittle.png`, `artifacts/survival-hunt-aim.png`, `artifacts/survival-hunt-landed.png`. No browser errors.
+
+Performance: one instanced draw for every branch and dropped stick (up to 68), plus a rabbits-on-the-ground draw and a stick-in-flight draw that are hidden unless in use. No new lights, shadow passes or shaders (the branch material compiles to the same program as the camp's). Branch spots are worked out once per tree and the instances are rewritten only after you move 3 m. The stress test before and after, in cloud software rendering at the same small viewport: draw calls 28 to 29 before and 29 to 30 after, CPU 3.0 to 3.1 ms before and 3.1 to 3.4 ms after, update phase 0.33 ms before and 0.37 to 0.4 ms after (`artifacts/survival-hunt-before-performance.json`, `artifacts/survival-hunt-after-performance.json`). Real frame times still can't be measured here, so 60 FPS on the development Mac is not confirmed.
+
 # Survival you can feel (overhaul phases 0 and 1)
 
 The first step of the survival overhaul (plan: `survival-overhaul-plan.md` in the project files). The game now tells you what is going on while you play, and your body warns you before the bars do.

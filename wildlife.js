@@ -72,10 +72,12 @@ export class Wildlife {
   for(const r of this.rabbits){if(!r.active)continue;const dx=r.x-player.x,dz=r.z-player.z,d=Math.hypot(dx,dz);if(d>=bestD||d<.5)continue;if((dx*dirX+dz*dirZ)/d<.96)continue;best=r;bestD=d;}
   return best;
  }
- // Throwing stick: likelier close up and against a rabbit that has not seen you.
- throwAt(r,player,roll=this.random()){
-  const d=Math.hypot(r.x-player.x,r.z-player.z),chance=Math.max(.1,Math.min(.9,.95-d*.06-(r.state==='flee'?.35:0)));
-  if(roll<chance){r.active=false;return true;}
+ // Throwing stick: likelier close up and against a rabbit that has not seen you. aim -.1..+.1:
+ // a steady, held aim helps and a snatched throw hurts.
+ throwChance(r,player,aim=0){const d=Math.hypot(r.x-player.x,r.z-player.z);return Math.max(.1,Math.min(.92,.95-d*.06-(r.state==='flee'?.35:0)+aim));}
+ throwAt(r,player,roll=this.random(),aim=0){
+  if(roll<this.throwChance(r,player,aim)){r.active=false;return true;}
   this.bolt(r,player);return false;
  }
+ kill(r){r.active=false;}
 }

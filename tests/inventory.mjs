@@ -12,7 +12,7 @@ assert.equal(act(rows,'light').enabled,false,'needs two bundles of wood');assert
 assert.equal(act(rows,'snare').enabled,true);assert.equal(act(rows,'lift').enabled,false);assert.equal(act(rows,'throw').enabled,false);assert.equal(act(rows,'sleep').enabled,false,'too light to sleep');
 assert.match(rows[0].detail,/2\.0 of 2 L/);
 // Beside a tree with wood, then at a lit fire with a rabbit.
-kit.wood=2;rows=backpackRows(kit,{tree:true,water:true,rabbit:true,snare:{},post:{code:'C'},sleepable:true});
+kit.wood=2;kit.sticks=1;rows=backpackRows(kit,{tree:true,water:true,rabbit:true,snare:{},post:{code:'C'},sleepable:true});
 assert.equal(rows[0].id,'post');assert.equal(act(rows,'register').label,'Register C');
 for(const id of ['gather','light','fill','throw','lift','sleep'])assert.equal(act(rows,id).enabled,true,id);
 assert.equal(backpackRows(kit,{wet:true}).flatMap(r=>r.actions).find(a=>a.act==='light').enabled,false,'no fires in the river');

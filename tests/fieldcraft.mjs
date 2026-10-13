@@ -21,7 +21,15 @@ look=lookTarget(player,kit,{post:{code:'A',x:0,z:-1.5},tree:{x:0,z:-2.5,radius:.
 assert.equal(lookTarget(player,kit,{post:{code:'A',x:0,z:-1.5},postReached:true}).act,null);
 assert.equal(lookTarget(player,kit,{snare:{x:0,z:-1},snareCaught:true}).label,'Lift snare · rabbit caught · G');
 kit.water=0;assert.equal(lookTarget(player,kit,{water:true}).label,'Fill bottles · G');kit.water=kit.bottles;assert.deepEqual(lookTarget(player,kit,{water:true}),{act:null,label:'Water · bottles full'});
-assert.equal(lookTarget(player,kit,{rabbit:{}}).act,'throw');
+assert.deepEqual(lookTarget(player,kit,{rabbit:{}}),{act:null,label:'Rabbit · find a straight branch under the trees for a throwing stick'},'no stick: the label says how to get one');
+kit.branches=1;assert.match(lookTarget(player,kit,{rabbit:{}}).label,/whittle your branch/);assert.deepEqual(lookTarget(player,kit,{}),{act:'whittle',label:'Whittle a throwing stick from your branch · G'},'with a branch and no stick, whittling is offered');
+look=lookTarget(player,kit,{tree:{x:0,z:-2.5,radius:.6}});assert.deepEqual(look,{act:'gather',label:'Gather dead wood · G   Whittle stick · hold G',whittle:true},'whittling rides along with what you look at');
+assert.equal(lookTarget(player,kit,{tree:{x:0,z:-2.5,radius:.6}},'touch').label,'Gather dead wood · Tap','touch whittles from the bag instead');
+kit.whittle();assert.equal(kit.sticks,1);assert.equal(kit.branches,0);assert.deepEqual(lookTarget(player,kit,{rabbit:{}}),{act:'throw',label:'Throw stick at rabbit · hold G'});assert.equal(lookTarget(player,kit,{rabbit:{}},'touch').label,'Throw stick at rabbit · Tap');
+assert.equal(lookTarget(player,kit,{}),null,'nothing to whittle once you have a stick');
+assert.equal(lookTarget(player,kit,{branch:{x:0,z:-1.5}}).label,'Pick up branch · G');assert.equal(lookTarget(player,kit,{branch:{x:0,z:1.5}}),null,'a branch behind you is not offered');
+assert.equal(lookTarget(player,kit,{stick:{x:0,z:-1.5},branch:{x:0,z:-1}}).act,'pickup-stick','your own stick before another branch');
+assert.equal(lookTarget(player,kit,{carcass:{x:0,z:-1.5},stick:{x:0,z:-1.5}}).act,'pickup-rabbit','the rabbit first');
 // Campfire: G adds wood when you have it, otherwise cooks; the label lists every option.
 const fire={x:0,z:-2};kit.wood=0;kit.raw=0;
 assert.deepEqual(lookTarget(player,kit,{fire}),{act:null,label:'Campfire · gather wood to keep it going'});
@@ -34,7 +42,7 @@ console.log('Passed look-at facing, label priority, input key names and campfire
 const voice=new FieldKit(()=>0);voice.pack();let bands=needBands(voice,{});
 assert.equal(needAdvice(voice,null),'','no advice without a previous reading');assert.equal(needAdvice(voice,bands),'');
 voice.energy=50;assert.match(needAdvice(voice,bands),/^Getting hungry\. Eat a ration, or keep it and hunt/);
-voice.rations=0;assert.match(needAdvice(voice,bands),/Throw your stick at a rabbit/);voice.raw=1;assert.match(needAdvice(voice,bands),/Cook your rabbit/);
+voice.rations=0;assert.match(needAdvice(voice,bands),/Find a straight branch under the trees, whittle a throwing stick/);voice.branches=1;assert.match(needAdvice(voice,bands),/Whittle your branch/);voice.whittle();assert.match(needAdvice(voice,bands),/Creep up on a rabbit and throw your stick/);voice.raw=1;assert.match(needAdvice(voice,bands),/Cook your rabbit/);
 bands=needBands(voice,{});voice.energy=55;assert.equal(needAdvice(voice,bands),'','recovering within a band says nothing');
 voice.energy=80;bands=needBands(voice,{});voice.energy=50;voice.hydration=50;assert.match(needAdvice(voice,bands),/^Thirsty\. Drink from your bottle/,'thirst is said first');
 voice.water=0;assert.match(needAdvice(voice,bands),/Springs are the blue dots/);
