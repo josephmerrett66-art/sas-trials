@@ -51,3 +51,18 @@ assert.equal(rig.arms.model.position.z,-.15,'always uses the holding pose, never
 assert.strictEqual(rig.arms.mesh.geometry,geometry);assert.strictEqual(rig.arms.mesh.material,material);
 const time=rig.arms.mixer.time;rig.update(player,0,feel,false);assert.equal(rig.arms.mixer.time,time,'pause does not advance the running clip');
 console.log('Passed original gun-arm reuse without weapons, native running clip, low running chart, look-down inspection, always-held equipment and paused/reused animation.');
+
+// Field actions: one prop mesh plays each gesture, hides the map while it does, then puts it back.
+import {GESTURES,poseGesture,propGeometries} from '../field-props.js';
+{
+ const props=propGeometries();for(const [name,g] of Object.entries(GESTURES)){assert.ok(props[g.prop],`${name} has a prop`);assert.ok(g.time>0&&g.time<=1.2,`${name} is quick`);assert.ok(g.keys.length>=2);}
+ for(const [name,geometry] of Object.entries(props)){geometry.computeBoundingSphere();assert.ok(geometry.boundingSphere.radius<.7,`${name} is hand-sized`);assert.ok(geometry.attributes.color,`${name} is vertex coloured`);}
+ const o=new THREE.Object3D(),g=GESTURES.drink;poseGesture(g,0,o);assert.deepEqual(o.position.toArray(),g.keys[0].slice(0,3));poseGesture(g,1,o);for(let i=0;i<3;i++)assert.ok(Math.abs(o.position.getComponent(i)-g.keys[2][i])<1e-6,'ends on the last key');
+ const player={pitch:-.3,vx:0,vz:0,grounded:true,state:'IDLE',config:defaults};const before=camera.children.filter(c=>c.isMesh).length;
+ rig.gesture('strike');rig.update(player,.1);assert.equal(rig.prop.visible,true);assert.equal(rig.prop.geometry,rig.props.steel,'the fire steel is in hand');assert.equal(rig.map.visible,false,'the map is put away for a moment');
+ rig.update(player,.5);assert.equal(rig.prop.visible,false,'the gesture ends');assert.equal(rig.map.visible,true);
+ rig.gesture('eat-rabbit');rig.hold('pitch',.5);rig.update(player,.1);assert.equal(rig.prop.geometry,rig.props.branch,'a hold takes over from a gesture');rig.hold(null);rig.update(player,.1);assert.equal(rig.prop.visible,false);
+ rig.gesture('no-such-thing');rig.update(player,.1);assert.equal(rig.prop.visible,false);
+ assert.equal(camera.children.filter(c=>c.isMesh).length,before,'no meshes are added while acting');assert.equal(before,1,'all props share one mesh');
+ console.log('Passed field-action gestures: every prop exists and is hand-sized, poses ease between keys, one shared prop mesh.');
+}

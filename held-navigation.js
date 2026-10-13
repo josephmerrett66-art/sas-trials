@@ -3,7 +3,7 @@ import {CompassHeading} from './compass-heading.js?v=1';
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {NavigationArms} from './navigation-arms.js?v=always-held-1';
-import {stickGeometry,hatchetGeometry} from './forest-floor.js?v=fire-1';
+import {propGeometries,GESTURES,poseGesture} from './field-props.js?v=1';
 // One static chart texture and a small shared-material rig; no lights or shadow passes.
 export class HeldNavigation {
  constructor(camera,chart){
@@ -26,18 +26,22 @@ export class HeldNavigation {
   this.root.updateMatrixWorld(true);
   this.root.traverse(o=>{if(o.isMesh){o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=100;}});
   this.dial.renderOrder=101;this.needle.children.forEach(o=>o.renderOrder=102);north.renderOrder=103;
-  // The throwing stick takes the map's place in the right hand while you whittle or aim.
-  this.stick=new THREE.Mesh(stickGeometry(8),new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,depthTest:false,depthWrite:false,fog:false}));this.stick.renderOrder=100;this.stick.visible=false;camera.add(this.stick);
-  this.hatchet=new THREE.Mesh(hatchetGeometry(),this.stick.material);this.hatchet.renderOrder=100;this.hatchet.visible=false;camera.add(this.hatchet);this.holding=null;this.holdAmount=0;
+  // Whatever you are using takes the map's place in the right hand: one mesh, its shape swapped
+  // between prepared props, so using things never costs more than one extra draw.
+  this.props=propGeometries();this.prop=new THREE.Mesh(this.props.stick,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,depthTest:false,depthWrite:false,fog:false}));this.prop.renderOrder=100;this.prop.visible=false;this.prop.frustumCulled=false;camera.add(this.prop);
+  this.holding=null;this.holdAmount=0;this.gestureName=null;this.gestureTime=0;
   this.arms=new NavigationArms(this.root);this.ready=this.arms.ready;
   this.root.visible=false;
  }
- // kind: null, 'whittle', 'aim' or 'chop'; amount 0..1 is whittling progress or how far the arm is drawn back.
+ // kind: null, 'whittle', 'aim', 'chop' or 'pitch'; amount 0..1 is progress or how far the arm is drawn back.
  hold(kind,amount=0){this.holding=kind;this.holdAmount=amount;}
+ // A one-shot movement for an action (see GESTURES): picking up, putting down, striking, eating.
+ gesture(name){if(!GESTURES[name])return;this.gestureName=name;this.gestureTime=0;}
+ show(name){if(this.prop.geometry!==this.props[name])this.prop.geometry=this.props[name];this.prop.visible=true;}
  // tremor 0..1: cold or hunger makes the hands shake, so the map and compass tremble.
  update(player,dt=0,feel=null,active=true,tremor=0){
   this.heading.update(this.camera);
-  this.root.visible=active;if(!active){this.stick.visible=this.hatchet.visible=false;return;}
+  this.root.visible=active;if(!active){this.prop.visible=false;this.gestureName=null;return;}
   // Equipment stays low in the world; looking down brings it into view.
   this.root.rotation.x=-player.pitch;
   this.shake=(this.shake??0)+dt;const t=this.shake;this.root.position.set((Math.sin(t*43)+Math.sin(t*71)*.6)*.0028*tremor,(Math.sin(t*37+1)+Math.sin(t*89)*.5)*.0022*tremor,0);
@@ -45,11 +49,16 @@ export class HeldNavigation {
   // Keep the chart edge and compass seated in the animated gun-arm grips.
   this.map.position.set(this.arms.right.x-.34,this.arms.right.y-.04,this.arms.right.z-.11);
   this.compass.position.set(this.arms.left.x,this.arms.left.y+.03,this.arms.left.z-.06);
-  const kind=this.holding,a=this.holdAmount;this.map.visible=!kind;this.stick.visible=kind==='whittle'||kind==='aim';this.hatchet.visible=kind==='chop';
+  const kind=this.holding,a=this.holdAmount,p=this.prop;
+  // A hold (whittling, chopping, aiming, building) outlasts any gesture; otherwise a gesture plays out.
+  if(kind)this.gestureName=null;else if(this.gestureName){this.gestureTime+=dt;const g=GESTURES[this.gestureName];if(this.gestureTime>=g.time)this.gestureName=null;else{this.show(g.prop);poseGesture(g,this.gestureTime/g.time,p);}}
+  this.map.visible=!kind&&!this.gestureName;if(!kind&&!this.gestureName)p.visible=false;
   // Held in view whatever the pitch, low on the right: carved toward you, or drawn back to throw.
-  if(kind==='whittle'){const cut=Math.sin(this.shake*15);this.stick.position.set(.16,-.34+cut*.01,-.6+cut*.025);this.stick.rotation.set(.35,.95,.1);}
-  else if(kind==='chop'){const swing=Math.max(0,Math.sin(this.shake*9));this.hatchet.position.set(.24,-.26-.1*swing,-.55);this.hatchet.rotation.set(-.2-1.3*swing,-.25,.15);}
-  else if(kind==='aim'){this.stick.position.set(.26+.08*a,-.36+.2*a,-.68+.14*a);this.stick.rotation.set(-.2-.5*a,.18,-.2*a);}
+  if(kind==='whittle'){this.show('stick');const cut=Math.sin(this.shake*15);p.position.set(.16,-.34+cut*.01,-.6+cut*.025);p.rotation.set(.35,.95,.1);}
+  else if(kind==='chop'){this.show('hatchet');const swing=Math.max(0,Math.sin(this.shake*9));p.position.set(.24,-.26-.1*swing,-.55);p.rotation.set(-.2-1.3*swing,-.25,.15);}
+  else if(kind==='aim'){this.show('stick');p.position.set(.26+.08*a,-.36+.2*a,-.68+.14*a);p.rotation.set(-.2-.5*a,.18,-.2*a);}
+  // Building the basha: a branch worked into place, pushed down and lashed, again and again.
+  else if(kind==='pitch'){this.show('branch');const push=Math.max(0,Math.sin(this.shake*5)),turn=Math.sin(this.shake*2.5);p.position.set(.12+.04*turn,-.2-.1*push,-.7-.08*push);p.rotation.set(.2+.5*push,1.2+.3*turn,.3);}
   // Local +Y is the fixed forward marker. Positive Z rotation moves north left
   // as the camera turns east; both dial and red tip use the same horizontal heading.
   this.dial.rotation.z=this.heading.angle;this.needle.rotation.z=this.heading.angle;}

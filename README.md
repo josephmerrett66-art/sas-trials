@@ -1,3 +1,18 @@
+# Hands for every field action
+
+Every survival action now shows in your hands. The map goes down for a moment, and the thing you are using comes into view and moves (`field-props.js`):
+
+- **Picking up:** a branch, your throwing stick, a rabbit, a handful of dry grass, or a bundle of wood comes up from the ground and goes down into the bergen. Gathering wood by hand and finishing a chop both show the bundle.
+- **At the fire:** building the fire lay sets the wood down ahead of you. Each strike scrapes the fire steel down towards the tinder, alongside the sparks. Adding wood tosses a bundle onto the fire. Roasting puts the rabbit on the spit and taking it off brings it back. Boiling sets the mess tin down, and taking it off lifts it back.
+- **Water and food:** filling dips the bottle, drinking tips it up to your mouth, and eating raises a ration pack or the rabbit.
+- **Snares:** setting a snare lowers the peg and noose, and lifting it brings it back.
+- **Basha:** while you build it, a branch is worked into place and lashed, over and over.
+- Whittling, aiming a throw and chopping keep their existing animations.
+
+Checks: all node tests pass, including new ones in tests/held-compass.mjs. They check that every gesture has a prop, every prop is hand-sized and vertex-coloured, poses ease between key points, a hold takes over from a gesture, and the map comes back afterwards. Every gesture was screenshotted part way through in the browser, and the props were moved up into view where they first sat too low (`artifacts/field-actions-gestures.png`). No browser errors.
+
+Performance: one mesh swaps between eleven props prepared at load, replacing the separate stick and hatchet meshes. Acting never costs more than one extra draw, and nothing is allocated per frame. The stress test before and after, in cloud software rendering at the same small viewport: draw calls 30 to 31 before and 30 to 32 after, CPU 3.1 to 3.5 ms before and 3.2 to 3.4 ms after (`artifacts/field-actions-before-performance.json`, `artifacts/field-actions-after-performance.json`). 60 FPS on the development Mac is still not confirmed.
+
 # DS orders and the debrief (overhaul phase 5)
 
 The survival work is now part of selection. The DS gives orders for each leg of the course, checks them at the posts, and reads out a record at the end. Missing an order is a warning in the debrief, never a failure.
