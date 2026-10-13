@@ -1,23 +1,27 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD} from './kit.js?v=sticks-1';
-import {BergenView} from './bergen-view.js?v=sticks-1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,MAX_TINDER} from './kit.js?v=fire-1';
+import {BergenView} from './bergen-view.js?v=fire-1';
 
 // What the backpack shows: each thing you carry with what you can do with it here and now.
 // Pure data so it can be tested without a page. near: what is within reach of the player.
 export function backpackRows(kit,near){
- const {water=false,post=null,fire=false,snare=null,tree=false,rabbit=false,sleepable=false,wet=false}=near,rows=[];
+ const {water=false,post=null,fire=false,laid=false,spitOn=false,spitDone=false,snare=null,tree=false,ground=false,rabbit=false,sleepable=false,wet=false}=near,rows=[];
  const row=(id,name,detail,actions)=>rows.push({id,name,detail,actions:actions.map(([act,label,enabled])=>({act,label,enabled:!!enabled}))});
  if(post)row('post',`Checkpoint ${post.code}`,'You are at the post.',[['register',`Register ${post.code}`,true]]);
- row('water','Water',kit.bottles?`${kit.water.toFixed(1)} of ${kit.bottles} L${kit.untreated>.001?` · ${kit.untreated.toFixed(1)} L untreated`:''}`:'No bottles',[['drink','Drink',kit.water>.001],['fill',water?'Fill':'No water near',water]]);
+ row('water','Water',kit.bottles?`${kit.water.toFixed(1)} of ${kit.bottles} L${kit.untreated>.001?` · ${kit.untreated.toFixed(1)} L untreated`:''}`:'No bottles',[['drink','Drink',kit.water>.001],['fill',water?'Fill':'No water near',water],...(kit.has('stove')?[['boil',fire?'Boil':'Boil at a fire',fire&&kit.untreated>.001]]:[])]);
  row('rations','Rations',`${kit.rations} pack${kit.rations===1?'':'s'}${kit.has('stove')?' · eaten hot':''}`,[['eat-ration','Eat',kit.rations>0]]);
- row('rabbit','Rabbit',`${kit.cooked} cooked · ${kit.raw} raw`,[['eat-cooked','Eat cooked',kit.cooked>0],['cook',fire?'Cook':'Cook at a fire',fire&&(kit.raw>0||(kit.untreated>.001&&kit.has('stove')))],['eat-raw','Eat raw',kit.raw>0]]);
- row('wood','Dead wood',`${kit.wood} of ${MAX_WOOD} bundles${tree?' · dead wood here':''}`,[['gather',tree?'Gather':'No dead wood near',tree&&kit.wood<MAX_WOOD],fire?['stoke','Add to fire',kit.wood>0]:['light',wet?'Too wet here':'Light fire',!wet&&kit.wood>=2&&kit.has('firesteel')]]);
+ row('rabbit','Rabbit',`${kit.cooked} cooked · ${kit.raw} raw${spitOn?(spitDone?' · roast on the spit is done':' · one roasting on the spit'):''}`,[['eat-cooked','Eat cooked',kit.cooked>0],spitDone?['take','Take off spit',true]:['spit',fire?'Roast':'Roast at a fire',fire&&kit.raw>0&&!spitOn],['eat-raw','Eat raw',kit.raw>0]]);
+ // A fire needs tinder, a branch for kindling and dead wood; it is built, then struck alight.
+ row('wood','Fire and wood',`${kit.wood} of ${MAX_WOOD} bundles · ${kit.tinder} tinder · ${kit.branches} branch${kit.branches===1?'':'es'}${tree?' · dead wood here':''}`,[
+  kit.has('hatchet')?['chop',tree?'Chop':'No dead wood near',tree&&kit.wood<MAX_WOOD]:['gather',tree?'Gather':'No dead wood near',tree&&kit.wood<MAX_WOOD],
+  ['tinder',ground?'Pull grass':'No dry grass here',ground&&kit.tinder<MAX_TINDER],
+  fire?['stoke','Add to fire',kit.wood>0]:laid?['strike','Strike steel',kit.has('firesteel')]:['light',wet?'Too wet here':'Build fire',!wet&&!kit.fireMissing.length]]);
  row('snares','Snare wire',`${kit.snares} left${snare?' · snare here':''}`,[['snare','Set snare',kit.snares>0&&!wet],['lift','Lift snare',!!snare]]);
  const sticks=`${kit.sticks} stick${kit.sticks===1?'':'s'} · ${kit.branches} branch${kit.branches===1?'':'es'}`;
  row('stick','Throwing stick',kit.sticks?`${sticks}${rabbit?' · a rabbit in front of you':''}`:kit.branches?`${sticks} · whittle one with your knife`:'Find a straight branch under the trees',[['whittle','Whittle',kit.branches>0],['throw','Throw',rabbit&&kit.sticks>0]]);
  row('sleep',kit.has('bedroll')?'Sleeping bag':'Sleep',sleepable?(fire?'By the fire':kit.has('bedroll')?'In your bag':'Needs a fire or a sleeping bag'):'Make camp after 19:30',[['sleep','Sleep',sleepable]]);
  return rows;
 }
-const GEAR=[['firesteel','fire steel'],['filter','water filter'],['stove','stove and mess tin'],['waterproof','waterproof'],['bedroll','sleeping bag']];
+const GEAR=[['hatchet','hatchet'],['firesteel','fire steel'],['filter','water filter'],['stove','stove and mess tin'],['waterproof','waterproof'],['bedroll','sleeping bag']];
 
 // One backpack for every input: Tab or I on a keyboard, right stick click on Xbox, or the BAG
 // button on screen. Rebuilt only when what it shows changes; arrow keys or the D-pad move

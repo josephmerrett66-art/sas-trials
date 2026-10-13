@@ -1,4 +1,4 @@
-import {BergenGrid} from './bergen-grid.js?v=sticks-1';
+import {BergenGrid} from './bergen-grid.js?v=fire-1';
 // Bergen packing and field condition. Pure state: no DOM or rendering, so it can be tested in node.
 export const BASE_WEIGHT=6; // bergen, clothing, map, compass, torch and knife
 export const ITEMS=[
@@ -9,9 +9,14 @@ export const ITEMS=[
  {id:'stove',name:'Stove and mess tin',note:'Hot rations restore more energy. Boil water at a fire.',weight:1.4,max:1,start:0},
  {id:'firesteel',name:'Fire steel',note:'Light a fire from gathered wood.',weight:.1,max:1,start:1},
  {id:'bedroll',name:'Sleeping bag and bivvy',note:'Sleep warm without a fire.',weight:1.8,max:1,start:0},
- {id:'snares',name:'Snare wire',note:'Set a snare and come back for a rabbit.',weight:.1,max:4,start:2}
+ {id:'snares',name:'Snare wire',note:'Set a snare and come back for a rabbit.',weight:.1,max:4,start:2},
+ {id:'hatchet',name:'Hatchet',note:'Chop two bundles of dead wood from a tree instead of gathering one.',weight:.9,max:1,start:1}
 ];
-export const LITRE=1,BOTTLE_EMPTY=.15,RATION_WEIGHT=.6,WOOD_WEIGHT=.8,MEAT_WEIGHT=.5,MAX_WOOD=5,BRANCH_WEIGHT=.35;
+export const LITRE=1,BOTTLE_EMPTY=.15,RATION_WEIGHT=.6,WOOD_WEIGHT=.8,MEAT_WEIGHT=.5,MAX_WOOD=5,BRANCH_WEIGHT=.35,TINDER_WEIGHT=.05,MAX_TINDER=3;
+// A spit-roasted rabbit is done after this many game hours on a burning fire.
+export const SPIT_HOURS=.75;
+// The chance one strike of the fire steel catches the tinder; rain makes it harder.
+export const strikeChance=(rain=0)=>.4*(1-.6*Math.min(1,rain));
 // Hours of burn per bundle of firewood, and how long a fire may be stocked for.
 export const BURN_PER_WOOD=1.5,MAX_FUEL=8;
 const THIRST_SECONDS=14*60,HUNGER_SECONDS=20*60,WITHDRAW_SECONDS=60,SICK_SECONDS=180,DRINK=.5;
@@ -44,12 +49,13 @@ export class FieldKit {
  get cooked(){return this.bergen.count('cooked');}set cooked(n){this.bergen.setCount('cooked',n);}
  get branches(){return this.bergen.count('branch');}set branches(n){this.bergen.setCount('branch',n);}
  get sticks(){return this.bergen.count('stick');}set sticks(n){this.bergen.setCount('stick',n);}
+ get tinder(){return this.bergen.count('tinder');}set tinder(n){this.bergen.setCount('tinder',n);}
  roomFor(ids){return this.bergen.roomFor(ids);}
  get bottles(){return this.loadout.water;}
  has(id){return (this.loadout[id]??0)>0;}
  pack(){this.layout=this.bergen.save();this.packed=true;this.water=this.bottles*LITRE;this.untreated=0;this.message=`Packed ${this.weight.toFixed(1)} kg`;}
  // Live weight falls as water is drunk and rations are eaten.
- get weight(){if(!this.packed)return packWeight(this.loadout);return BASE_WEIGHT+this.bottles*BOTTLE_EMPTY+this.water+this.rations*RATION_WEIGHT+this.wood*WOOD_WEIGHT+(this.raw+this.cooked)*MEAT_WEIGHT+(this.branches+this.sticks)*BRANCH_WEIGHT+ITEMS.filter(i=>!['water','rations'].includes(i.id)).reduce((sum,i)=>sum+i.weight*this.loadout[i.id],0);}
+ get weight(){if(!this.packed)return packWeight(this.loadout);return BASE_WEIGHT+this.bottles*BOTTLE_EMPTY+this.water+this.rations*RATION_WEIGHT+this.wood*WOOD_WEIGHT+(this.raw+this.cooked)*MEAT_WEIGHT+(this.branches+this.sticks)*BRANCH_WEIGHT+this.tinder*TINDER_WEIGHT+ITEMS.filter(i=>!['water','rations'].includes(i.id)).reduce((sum,i)=>sum+i.weight*this.loadout[i.id],0);}
  get pace(){return loadPace(this.weight)*Math.min(conditionPace(this.hydration),conditionPace(this.energy),conditionPace(this.warmth))*fatiguePace(this.awake);}
  drink(){
   if(!this.packed||this.withdrawn)return false;
@@ -82,17 +88,29 @@ export class FieldKit {
   this.message=this.has('filter')?`Filtered ${added.toFixed(1)} L`:`Filled ${added.toFixed(1)} L of untreated water`;return true;
  }
  // Fieldcraft. Each returns true when it did something; the message says what happened.
- gatherWood(){
+ // bundles: 1 gathered by hand, 2 chopped with the hatchet. True when at least one was taken.
+ gatherWood(bundles=1){
   if(!this.packed||this.withdrawn)return false;
   if(this.wood>=MAX_WOOD){this.message=`Carrying all the wood you can (${MAX_WOOD} bundles).`;return false;}
-  if(!this.bergen.autoPlace('wood')){this.message='No room in your bergen for wood. Rearrange it, or burn or eat something.';return false;}this.message=`Gathered dead wood · ${this.wood} bundle${this.wood>1?'s':''}`;return true;
+  let got=0;while(got<bundles&&this.wood<MAX_WOOD&&this.bergen.autoPlace('wood'))got++;
+  if(!got){this.message='No room in your bergen for wood. Rearrange it, or burn or eat something.';return false;}
+  this.message=`${bundles>1?'Chopped':'Gathered'} dead wood · ${this.wood} bundle${this.wood>1?'s':''}`;return true;
  }
- // Returns the hours of fuel for a new fire, or 0 when it cannot be lit.
- lightFire(){
+ gatherTinder(){
+  if(!this.packed||this.withdrawn)return false;
+  if(this.tinder>=MAX_TINDER){this.message=`Carrying all the tinder you need (${MAX_TINDER}).`;return false;}
+  if(!this.bergen.autoPlace('tinder')){this.message='No room in your bergen for tinder.';return false;}
+  this.message=`Pulled a handful of dry grass for tinder · ${this.tinder}`;return true;
+ }
+ // A fire needs tinder to catch, a branch for kindling and a bundle of dead wood to burn.
+ get fireMissing(){const missing=[];if(!this.has('firesteel'))missing.push('a fire steel');if(this.tinder<1)missing.push('tinder (dry grass, or shavings from whittling)');if(this.branches<1)missing.push('a branch for kindling');if(this.wood<1)missing.push('a bundle of dead wood');return missing;}
+ // Lays a fire: tinder under a branch of kindling and a bundle of wood. Returns its hours of fuel,
+ // or 0 when something is missing. It still has to be lit with the fire steel.
+ layFire(){
   if(!this.packed||this.withdrawn)return 0;
-  if(!this.has('firesteel')){this.message='No fire steel to light a fire.';return 0;}
-  if(this.wood<2){this.message=`Need 2 bundles of wood to light a fire (carrying ${this.wood}).`;return 0;}
-  this.wood-=2;this.message='Fire lit. Stand close to warm up.';return 2*BURN_PER_WOOD;
+  const missing=this.fireMissing;if(missing.length){this.message=`To build a fire you need ${missing.join(', ')}.`;return 0;}
+  this.bergen.removeOne('tinder');this.bergen.removeOne('branch');this.bergen.removeOne('wood');
+  this.message='Fire laid. Strike your fire steel over the tinder to light it.';return BURN_PER_WOOD+.5;
  }
  // Adds a bundle to a fire with `fuel` hours left; returns the new fuel or the old one.
  stokeFire(fuel){
@@ -100,15 +118,15 @@ export class FieldKit {
   if(fuel>=MAX_FUEL-.5){this.message='The fire is well stocked.';return fuel;}
   this.wood--;this.message='Added wood to the fire.';return Math.min(MAX_FUEL,fuel+BURN_PER_WOOD);
  }
- // At a fire: cook any rabbit and, with a mess tin, boil untreated water safe.
+ // At a fire, with a mess tin: boil untreated water safe.
  cook(){
   if(!this.packed||this.withdrawn)return false;
-  const boil=this.untreated>.001&&this.has('stove'),done=[];
-  if(this.raw>0){done.push(`cooked ${this.raw} rabbit`);this.bergen.convert('raw','cooked');}
-  if(boil){done.push(`boiled ${this.untreated.toFixed(1)} L`);this.untreated=0;}
-  if(!done.length){this.message=this.untreated>.001?'Nothing to cook. A mess tin would let you boil water.':'Nothing to cook.';return false;}
-  this.message=`At the fire: ${done.join(', ')}.`;return true;
+  if(!(this.untreated>.001&&this.has('stove'))){this.message=this.untreated>.001?'A mess tin would let you boil this water.':'Nothing to boil.';return false;}
+  this.message=`Boiled ${this.untreated.toFixed(1)} L. Safe to drink.`;this.untreated=0;return true;
  }
+ // Rabbits roast on a spit over the fire: one goes on, and comes off cooked when it is done.
+ spitRabbit(){if(!this.packed||this.withdrawn||!this.bergen.removeOne('raw')){this.message='No rabbit to roast.';return false;}this.message='Rabbit on the spit. Keep the fire going until it is done.';return true;}
+ takeCooked(){if(!this.packed||this.withdrawn)return false;if(!this.bergen.autoPlace('cooked')){this.message='No room in your bergen for the rabbit. Eat it now, or make room.';return false;}this.message='Roast rabbit, hot off the spit. Eat it now or carry it.';return true;}
  setSnare(){
   if(!this.packed||this.withdrawn)return false;
   if(this.snares<=0){this.message='No snare wire left.';return false;}
@@ -126,7 +144,8 @@ export class FieldKit {
  whittle(){
   if(!this.packed||this.withdrawn)return false;
   if(!this.bergen.convertOne('branch','stick')){this.message='No branch to whittle. Look under the trees.';return false;}
-  this.message='Whittled a throwing stick. Creep up on a rabbit, then hold to aim.';return true;
+  const shavings=this.tinder<MAX_TINDER&&!!this.bergen.autoPlace('tinder');
+  this.message=`Whittled a throwing stick${shavings?', and kept the shavings for tinder':''}. Creep up on a rabbit, then hold to aim.`;return true;
  }
  // A thrown stick leaves the bergen until you pick it up again.
  throwStick(){if(!this.packed||this.withdrawn||!this.bergen.removeOne('stick'))return false;return true;}

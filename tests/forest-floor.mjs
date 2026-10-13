@@ -18,7 +18,7 @@ floor.step(0,player);assert.ok(floor.spotCount>5,'branches near the player');ass
 const near=floor.spots[0];player.x=near.x;player.z=near.z+1;assert.equal(floor.nearestBranch(player),near);
 const kit=new FieldKit(()=>0);kit.pack();assert.equal(kit.sticks,0,'no stick to start with');
 assert.equal(kit.takeBranch(),true);floor.take(near);floor.step(0,player);assert.notEqual(floor.nearestBranch(player),near,'a taken branch is gone');assert.equal(kit.branches,1);assert.match(kit.message,/Whittle it/);
-const weight=kit.weight;assert.equal(kit.whittle(),true);assert.equal(kit.sticks,1);assert.equal(kit.branches,0);assert.equal(kit.weight,weight,'whittling keeps the weight');assert.equal(kit.whittle(),false,'nothing left to whittle');
+const weight=kit.weight;assert.equal(kit.whittle(),true);assert.equal(kit.sticks,1);assert.equal(kit.branches,0);assert.ok(Math.abs(kit.weight-weight-.05)<1e-9,'whittling adds only the shavings');assert.equal(kit.tinder,1);assert.equal(kit.whittle(),false,'nothing left to whittle');
 
 // Throw: the stick leaves the bergen, flies, lands where aimed and can be picked up again.
 assert.equal(kit.throwStick(),true);assert.equal(kit.sticks,0);assert.equal(kit.throwStick(),false,'one stick, one throw');

@@ -11,7 +11,7 @@ assert.equal(facing(player,2,-.2,2.6),false,'off to the side');assert.equal(faci
 assert.equal(facing(player,0,-4,2.6),false,'out of reach');assert.equal(facing(player,0,-4,2.6,1.6),true,'a tree trunk is reached at its edge');
 
 // Look-at label and what G does.
-const kit=new FieldKit(()=>0);kit.pack();
+const kit=new FieldKit(()=>0);kit.set('hatchet',0);kit.pack();
 assert.equal(lookTarget(player,kit,{}),null,'nothing in view, no label');
 let look=lookTarget(player,kit,{tree:{x:0,z:-2.5,radius:.6}});assert.deepEqual(look,{act:'gather',label:'Gather dead wood · G'});
 assert.equal(lookTarget(player,kit,{tree:{x:0,z:2.5,radius:.6}}),null,'a tree behind you is not offered');
@@ -33,20 +33,32 @@ assert.equal(lookTarget(player,kit,{carcass:{x:0,z:-1.5},stick:{x:0,z:-1.5}}).ac
 // Campfire: G adds wood when you have it, otherwise cooks; the label lists every option.
 const fire={x:0,z:-2};kit.wood=0;kit.raw=0;
 assert.deepEqual(lookTarget(player,kit,{fire}),{act:null,label:'Campfire · gather wood to keep it going'});
-kit.raw=1;assert.deepEqual(lookTarget(player,kit,{fire}),{act:'cook',label:'Campfire · Cook rabbit · G'});
-kit.wood=2;look=lookTarget(player,kit,{fire,sleepable:true});assert.equal(look.act,'stoke');assert.equal(look.label,'Campfire · Add wood · G   Cook rabbit · F   Sleep · Z');
-assert.equal(lookTarget(player,kit,{fire,sleepable:true},'touch').label,'Campfire · Add wood · Tap   Cook rabbit','touch shows no keys it has none for');
+kit.raw=1;assert.deepEqual(lookTarget(player,kit,{fire}),{act:'spit',label:'Campfire · Roast rabbit · G'});
+kit.wood=2;look=lookTarget(player,kit,{fire,sleepable:true});assert.equal(look.act,'stoke');assert.equal(look.label,'Campfire · Add wood · G   Roast rabbit · F   Sleep · Z');
+assert.equal(lookTarget(player,kit,{fire,sleepable:true},'touch').label,'Campfire · Add wood · Tap   Roast rabbit','touch shows no keys it has none for');
+// Roasting: progress while it cooks, then taking it off comes first.
+assert.equal(lookTarget(player,kit,{fire,spit:{done:false,progress:.4}}).label,'Campfire · Add wood · G   Rabbit roasting · 40%');
+assert.deepEqual(lookTarget(player,kit,{fire,spit:{done:true,progress:1}}),{act:'take',label:'Campfire · Take roast rabbit · G   Add wood · F'});
+assert.deepEqual(lookTarget(player,kit,{laid:{x:0,z:-1.5}}),{act:'strike',label:'Fire lay · Strike your fire steel · G'});
+// Trees: with a hatchet you chop, by hand you gather.
+const axe=new FieldKit(()=>0);axe.pack();assert.deepEqual(lookTarget(player,axe,{tree:{x:0,z:-2.5,radius:.6}}),{act:'chop',label:'Chop dead wood · G'});
+// Open ground: dry grass for tinder; and a fire once you have tinder, a branch and wood.
+const camp=new FieldKit(()=>0);camp.pack();assert.equal(lookTarget(player,camp,{canBuild:true}),null,'nothing to build with yet');
+assert.deepEqual(lookTarget(player,camp,{ground:true,canBuild:true}),{act:'tinder',label:'Pull dry grass for tinder · G'});
+camp.gatherTinder();camp.wood=1;camp.takeBranch();camp.sticks=1;
+assert.deepEqual(lookTarget(player,camp,{canBuild:true}),{act:'build',label:'Build a fire here · F'});assert.deepEqual(lookTarget(player,camp,{ground:true,canBuild:true}),{act:'tinder',label:'Pull dry grass for tinder · G   Build a fire here · F'});
+assert.deepEqual(lookTarget(player,camp,{canBuild:true},'touch'),{act:'build',label:'Build a fire here · Tap'});
 console.log('Passed look-at facing, label priority, input key names and campfire options.');
 
 // Inner voice: one line when a need gets worse, naming the next step with what you carry.
 const voice=new FieldKit(()=>0);voice.pack();let bands=needBands(voice,{});
 assert.equal(needAdvice(voice,null),'','no advice without a previous reading');assert.equal(needAdvice(voice,bands),'');
 voice.energy=50;assert.match(needAdvice(voice,bands),/^Getting hungry\. Eat a ration, or keep it and hunt/);
-voice.rations=0;assert.match(needAdvice(voice,bands),/Find a straight branch under the trees, whittle a throwing stick/);voice.branches=1;assert.match(needAdvice(voice,bands),/Whittle your branch/);voice.whittle();assert.match(needAdvice(voice,bands),/Creep up on a rabbit and throw your stick/);voice.raw=1;assert.match(needAdvice(voice,bands),/Cook your rabbit/);
+voice.rations=0;assert.match(needAdvice(voice,bands),/Find a straight branch under the trees, whittle a throwing stick/);voice.branches=1;assert.match(needAdvice(voice,bands),/Whittle your branch/);voice.whittle();assert.match(needAdvice(voice,bands),/Creep up on a rabbit and throw your stick/);voice.raw=1;assert.match(needAdvice(voice,bands),/Roast your rabbit/);
 bands=needBands(voice,{});voice.energy=55;assert.equal(needAdvice(voice,bands),'','recovering within a band says nothing');
 voice.energy=80;bands=needBands(voice,{});voice.energy=50;voice.hydration=50;assert.match(needAdvice(voice,bands),/^Thirsty\. Drink from your bottle/,'thirst is said first');
 voice.water=0;assert.match(needAdvice(voice,bands),/Springs are the blue dots/);
-voice.hydration=100;voice.energy=100;bands=needBands(voice,{});voice.warmth=50;assert.match(needAdvice(voice,bands),/Getting cold\. A fire would help/);voice.wood=2;assert.match(needAdvice(voice,bands),/you have the wood/);
+voice.hydration=100;voice.energy=100;bands=needBands(voice,{});voice.warmth=50;assert.match(needAdvice(voice,bands),/Getting cold\. A fire would help/);voice.wood=0;voice.tinder=0;assert.match(needAdvice(voice,bands),/You still need tinder \(dry grass, or shavings from whittling\), a branch for kindling, a bundle of dead wood/,'the advice lists what is missing');voice.wood=2;voice.tinder=1;voice.branches=1;assert.match(needAdvice(voice,bands),/Build a fire: you have tinder, kindling and wood/);
 voice.warmth=100;bands=needBands(voice,{});voice.awake=TIRED_HOURS+1;assert.match(needAdvice(voice,bands),/^Tired\./);
 console.log('Passed inner-voice advice for hunger, thirst, cold and tiredness.');
 

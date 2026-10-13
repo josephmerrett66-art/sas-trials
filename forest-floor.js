@@ -27,6 +27,15 @@ export function stickGeometry(segments=6){
   tint(place(new THREE.ConeGeometry(.02,.16,segments),0,0,-.45,-Math.PI/2),0xd8c49a)
  ]);
 }
+// A hatchet held upright: a timber haft along y with a steel head and bright edge at the top.
+export function hatchetGeometry(){
+ return mergeGeometries([
+  tint(place(new THREE.CylinderGeometry(.016,.02,.46,6),0,0,0),0x8b7154),
+  tint(place(new THREE.BoxGeometry(.05,.06,.035),0,.22,0),0x4f5458),
+  tint(place(new THREE.BoxGeometry(.09,.075,.012),0,.22,-.06),0x6d7276),
+  tint(place(new THREE.BoxGeometry(.1,.008,.014),0,.22,-.105,Math.PI/2),0xc2c6c8)
+ ]);
+}
 // Stable per-tree random numbers, so a tree always drops the same branch in the same place.
 function hash(x,z,k){let h=Math.imul(Math.round(x*7)^0x9e3779b1,0x85ebca6b)^Math.imul(Math.round(z*7)+k*374761393,0xc2b2ae35);h^=h>>>15;h=Math.imul(h,0x27d4eb2d);h^=h>>>13;return (h>>>0)/4294967296;}
 // Where a tree's fallen branch lies (writes into out), or null for a tree without one.

@@ -1,8 +1,8 @@
 // The bergen as a physical space: a grid of cells, and every item a block that must fit.
 // Pure state, testable in node. Sizes are cells wide × tall when not turned.
 export const COLS=6,ROWS=7;
-export const SHAPES={water:[1,2],rations:[2,1],filter:[1,1],waterproof:[3,2],stove:[2,2],firesteel:[1,1],bedroll:[2,4],snares:[1,1],wood:[1,3],raw:[2,1],cooked:[2,1],branch:[1,3],stick:[1,3]};
-export const LABELS={water:'Water',rations:'Ration',filter:'Filter',waterproof:'Jacket',stove:'Stove',firesteel:'Steel',bedroll:'Sleeping bag',snares:'Snare',wood:'Wood',raw:'Rabbit',cooked:'Cooked',branch:'Branch',stick:'Stick'};
+export const SHAPES={water:[1,2],rations:[2,1],filter:[1,1],waterproof:[3,2],stove:[2,2],firesteel:[1,1],bedroll:[2,4],snares:[1,1],wood:[1,3],raw:[2,1],cooked:[2,1],branch:[1,3],stick:[1,3],hatchet:[1,2],tinder:[1,1]};
+export const LABELS={water:'Water',rations:'Ration',filter:'Filter',waterproof:'Jacket',stove:'Stove',firesteel:'Steel',bedroll:'Sleeping bag',snares:'Snare',wood:'Wood',raw:'Rabbit',cooked:'Cooked',branch:'Branch',stick:'Stick',hatchet:'Hatchet',tinder:'Tinder'};
 
 export class BergenGrid {
  constructor(cols=COLS,rows=ROWS){this.cols=cols;this.rows=rows;this.items=[];this.next=1;}

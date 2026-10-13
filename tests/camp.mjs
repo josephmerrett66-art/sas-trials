@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import {DayClock,daylightAt,sunHeight,formatClock,START_HOUR} from '../daycycle.js';
-import {FieldKit,BURN_PER_WOOD,MAX_WOOD,TIRED_HOURS,SPENT_HOURS,warmthWord,fatigueWord} from '../kit.js';
+import {FieldKit,BURN_PER_WOOD,MAX_WOOD,TIRED_HOURS,SPENT_HOURS,warmthWord,fatigueWord,SPIT_HOURS,strikeChance} from '../kit.js';
 import {Camp,FIRE_REACH} from '../camp.js';
 import {Wildlife,RABBITS,THROW_RANGE} from '../wildlife.js';
 import {terrainHeight} from '../terrain.js';
@@ -38,13 +38,17 @@ const rested=new FieldKit();rested.pack();assert.ok(tiredPace<rested.pace,'tired
 awake.step(1,{hours:SPENT_HOURS-awake.awake});assert.equal(awake.withdrawn,'Exhaustion: no sleep');
 
 // Wood, fire and cooking.
-const camper=new FieldKit(()=>.99);camper.pack();assert.equal(camper.lightFire(),0,'no wood, no fire');
+const camper=new FieldKit(()=>.99);camper.pack();assert.equal(camper.layFire(),0,'no wood, no fire');assert.match(camper.message,/tinder.*branch for kindling.*dead wood/,'the message lists what is missing');
 for(let i=0;i<MAX_WOOD+2;i++)camper.gatherWood();assert.equal(camper.wood,MAX_WOOD,'wood carried is limited');
 const weight=camper.weight;assert.ok(weight>new FieldKit().weight,'wood weighs something');
-assert.equal(camper.lightFire(),2*BURN_PER_WOOD);assert.equal(camper.wood,MAX_WOOD-2);
-assert.equal(camper.stokeFire(1),1+BURN_PER_WOOD);assert.equal(camper.wood,MAX_WOOD-3);
-const nosteel=new FieldKit();nosteel.set('firesteel',0);nosteel.pack();nosteel.wood=4;assert.equal(nosteel.lightFire(),0,'a fire steel is needed');
-camper.catchRabbit();assert.equal(camper.raw,1);assert.equal(camper.cook(),true);assert.equal(camper.cooked,1);assert.equal(camper.raw,0);
+assert.equal(camper.layFire(),0,'wood alone is not enough');camper.gatherTinder();camper.takeBranch();assert.deepEqual(camper.fireMissing,[]);
+assert.equal(camper.layFire(),BURN_PER_WOOD+.5);assert.equal(camper.wood,MAX_WOOD-1);assert.equal(camper.tinder,0);assert.equal(camper.branches,0);
+assert.equal(camper.stokeFire(1),1+BURN_PER_WOOD);assert.equal(camper.wood,MAX_WOOD-2);
+for(let i=0;i<5;i++)camper.gatherTinder();assert.equal(camper.tinder,3,'tinder carried is limited');camper.tinder=0;
+const axe=new FieldKit();axe.pack();assert.equal(axe.has('hatchet'),true,'a hatchet is packed by default');axe.gatherWood(2);assert.equal(axe.wood,2);assert.match(axe.message,/Chopped/);
+const shave=new FieldKit();shave.pack();shave.takeBranch();shave.whittle();assert.equal(shave.tinder,1,'whittling leaves shavings for tinder');
+const nosteel=new FieldKit();nosteel.set('firesteel',0);nosteel.pack();nosteel.wood=4;nosteel.tinder=1;nosteel.branches=1;assert.equal(nosteel.layFire(),0,'a fire steel is needed');
+camper.catchRabbit();assert.equal(camper.raw,1);assert.equal(camper.spitRabbit(),true);assert.equal(camper.raw,0);assert.equal(camper.spitRabbit(),false);assert.equal(camper.takeCooked(),true);assert.equal(camper.cooked,1);
 camper.energy=20;camper.eat();assert.equal(camper.energy,65,'cooked rabbit is eaten first');assert.equal(camper.rations,1);
 const raw=new FieldKit(()=>0);raw.set('rations',0);raw.pack();raw.raw=1;raw.energy=20;raw.eat();assert.equal(raw.energy,35);assert.ok(raw.sick>0,'raw meat can make you ill');
 const boil=new FieldKit();boil.set('stove',1);boil.set('filter',0);boil.pack();boil.water=0;boil.refill();assert.ok(boil.untreated>1);boil.cook();assert.equal(boil.untreated,0,'a mess tin boils water safe at a fire');
@@ -64,10 +68,18 @@ camp.light(40,-60,3);assert.ok(camp.lit);assert.equal(camp.fire.y,terrainHeight(
 const player={x:40,z:-60+FIRE_REACH-.5};assert.ok(camp.warming(player));player.z+=1;assert.equal(camp.warming(player),false);
 const glow=camp.glow.geometry.attributes.position;for(let i=0;i<glow.count;i+=7)assert.ok(Math.abs(glow.getY(i)+camp.fire.y-terrainHeight(40+glow.getX(i),-60+glow.getZ(i))-.06)<1e-4,'the glow lies on the ground');
 camp.step(60,0,{rain:0});assert.ok(Math.abs(camp.fire.fuel-2)<1e-9,'a fire burns an hour of fuel each game hour');camp.burn(1,1);assert.ok(Math.abs(camp.fire.fuel-.5)<1e-9,'rain burns it faster');camp.burn(5);assert.equal(camp.lit,false);
+// A laid fire waits for a spark; a rabbit on the spit roasts only while it burns.
+camp.light(40,-60,2,false);assert.equal(camp.lit,false);assert.equal(camp.laid,true);camp.burn(1);assert.equal(camp.fire.fuel,2,'a laid fire does not burn');camp.step(.1,0,{});assert.ok(camp.strength.value<.01,'no flames before it is lit');
+camp.strike();assert.equal(camp.sparks.visible,true);camp.step(.5,0,{});assert.equal(camp.sparks.visible,false,'sparks die away');
+assert.equal(camp.setSpit(),false,'no spit over a cold fire');camp.ignite();assert.equal(camp.lit,true);assert.equal(camp.setSpit(),true);assert.equal(camp.setSpit(),false,'one rabbit at a time');
+camp.burn(SPIT_HOURS/2);assert.equal(camp.spitDone,false);assert.equal(camp.takeSpit(),false);camp.burn(SPIT_HOURS);assert.equal(camp.spitDone,true);assert.equal(camp.spitMesh.geometry,camp.spitGeometries[1],'it browns');
+assert.equal(camp.takeSpit(),true);assert.equal(camp.spitMesh.visible,false);
+camp.light(40,-60,.2);camp.setSpit();camp.burn(2);assert.equal(camp.spitDone,false,'a fire that dies leaves it half done');
+assert.ok(Math.abs(strikeChance(1)-.16)<1e-9&&strikeChance(0)===.4,'rain makes the steel harder to catch');
 camp.setSnare(10,10,0,.1);camp.setSnare(20,20,0,.9);assert.equal(camp.snareMesh.count,2);
 const s=camp.nearSnare({x:10.5,z:10});assert.ok(s);camp.step(0,1,{});assert.equal(camp.caughtMesh.count,0);camp.step(0,3,{});assert.equal(camp.caughtMesh.count,1,'a caught rabbit shows in the snare');
 assert.equal(camp.checkSnare(s,3),true);assert.equal(camp.checkSnare(camp.nearSnare({x:20,z:20}),50),false,'some snares never catch');assert.equal(camp.snareMesh.count,0);
-const draws=[];scene.traverse(o=>{if(o.isMesh)draws.push(o.name||'fire part');});assert.ok(draws.length<=5,'campfire, snares and caught rabbits are a handful of draws');
+const draws=[];scene.traverse(o=>{if(o.isMesh)draws.push(o.name||'fire part');});assert.ok(draws.length<=6,'campfire, spit, snares and caught rabbits are a handful of draws');camp.reset();assert.equal(camp.spitMesh.visible,false,'the spit only draws while roasting');
 assert.equal(scene.children.filter(o=>o.isLight).length,0,'no extra lights');
 
 // Rabbits: bounded pool, flee when disturbed, crouching gets you closer.

@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {terrainHeight} from './terrain.js?v=big-1';
 import {rabbitGeometry} from './wildlife.js?v=warrens-1';
+import {SPIT_HOURS} from './kit.js?v=fire-1';
 
 export const FIRE_REACH=4,SNARE_REACH=2.2,MAX_SNARES=4;
 let seed=9127;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -32,6 +33,15 @@ function glowGeometry(radius=6.5,rings=6,spokes=18){
  for(let i=0;i<rings;i++)for(let j=0;j<spokes;j++){const r0=i/rings*radius,r1=(i+1)/rings*radius,a0=j/spokes*Math.PI*2,a1=(j+1)/spokes*Math.PI*2;vertex(r0,a0);vertex(r1,a1);vertex(r1,a0);if(i){vertex(r0,a0);vertex(r0,a1);vertex(r1,a1);}}
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('glow',new THREE.Float32BufferAttribute(alphas,1));return g;
 }
+// Two forked stakes and a green-wood bar over the hearth, with a rabbit on it: raw, or roasted.
+function spitGeometry(roasted){
+ const parts=[];
+ for(const x of [-.55,.55]){parts.push(tint(place(flat(new THREE.CylinderGeometry(.022,.03,.95,5)),x,.47,0),0x6f4f33));parts.push(tint(place(flat(new THREE.CylinderGeometry(.012,.016,.2,4)),x+(x<0?.05:-.05),.95,0,0,0,x<0?-.5:.5),0x5c412a));}
+ parts.push(tint(place(flat(new THREE.CylinderGeometry(.016,.016,1.3,5)),0,.9,0,0,0,Math.PI/2),0x8b7154));
+ const rabbit=rabbitGeometry();rabbit.rotateZ(Math.PI/2);rabbit.rotateY(Math.PI/2);rabbit.translate(0,.9,0);
+ if(roasted){const c=rabbit.attributes.color;for(let i=0;i<c.count;i++)c.setXYZ(i,c.getX(i)*.62,c.getY(i)*.42,c.getZ(i)*.3);}
+ parts.push(rabbit);return mergeGeometries(parts);
+}
 function snareGeometry(){
  const stake=tint(place(flat(new THREE.CylinderGeometry(.018,.025,.45,5)),0,.2,0,.12,0,0),0x7b5a3a);
  const loop=tint(place(flat(new THREE.TorusGeometry(.09,.006,3,8)),.08,.12,0,0,Math.PI/2,0),0xb7b4a6);
@@ -39,7 +49,8 @@ function snareGeometry(){
  return mergeGeometries([stake,loop,tag]);
 }
 
-// One reusable campfire (only one burns at a time) and up to four snares.
+// One reusable campfire (only one burns at a time) and up to four snares. A fire is laid first
+// and only burns once lit; a rabbit on its spit roasts while it burns.
 export class Camp {
  constructor(scene){
   this.time={value:0};this.strength={value:0};this.night={value:0};
@@ -56,24 +67,41 @@ export class Camp {
   glow.onBeforeCompile=shader=>{shader.uniforms.fireStrength=this.strength;shader.uniforms.fireNight=this.night;shader.uniforms.fireTime=this.time;shader.vertexShader='attribute float glow;varying float vGlow;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvGlow=glow;');shader.fragmentShader='uniform float fireStrength;uniform float fireNight;uniform float fireTime;varying float vGlow;\n'+shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a=vGlow*fireStrength*(.12+.5*fireNight)*(.92+.08*sin(fireTime*11.0));');};
   glow.customProgramCacheKey=()=> 'campfire-glow-v1';
   this.glowGeometry=glowGeometry();this.glow=new THREE.Mesh(this.glowGeometry,glow);this.glow.renderOrder=2;
-  this.group.add(this.hearth,this.flames,this.glow);scene.add(this.group);
+  // The spit swaps between two prepared geometries, so roasting costs nothing per frame.
+  this.spitGeometries=[spitGeometry(false),spitGeometry(true)];this.spitMesh=new THREE.Mesh(this.spitGeometries[0],solid);this.spitMesh.visible=false;this.spitMesh.position.set(0,0,0);
+  // A few pooled sparks for each strike of the fire steel; hidden between strikes.
+  this.sparkPositions=new Float32Array(30);this.sparkVelocity=new Float32Array(30);const sparkGeometry=new THREE.BufferGeometry();sparkGeometry.setAttribute('position',new THREE.BufferAttribute(this.sparkPositions,3));
+  this.sparks=new THREE.Points(sparkGeometry,new THREE.PointsMaterial({color:0xffc26b,size:.05,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));this.sparks.visible=false;this.sparks.frustumCulled=false;this.sparkTime=0;
+  this.group.add(this.hearth,this.flames,this.glow,this.spitMesh,this.sparks);scene.add(this.group);
   this.snareMesh=new THREE.InstancedMesh(snareGeometry(),solid,MAX_SNARES);this.snareMesh.name='Snares';this.snareMesh.count=0;this.snareMesh.frustumCulled=false;scene.add(this.snareMesh);
   this.caughtMesh=new THREE.InstancedMesh(rabbitGeometry(),solid,MAX_SNARES);this.caughtMesh.name='Snared rabbits';this.caughtMesh.count=0;this.caughtMesh.frustumCulled=false;scene.add(this.caughtMesh);
   this.matrix=new THREE.Matrix4();this.transform=new THREE.Object3D();this.reset();
  }
- reset(){this.fire=null;this.snares=[];this.group.visible=false;this.syncSnares(0);}
- get lit(){return !!this.fire&&this.fire.fuel>0;}
- // Light a fire just ahead of the player on the ground.
- light(x,z,fuel){
-  const y=terrainHeight(x,z);this.fire={x,z,y,fuel};this.group.position.set(x,y,z);this.group.visible=true;
+ reset(){this.fire=null;this.spit=null;this.snares=[];this.group.visible=false;this.spitMesh.visible=false;this.sparks.visible=false;this.sparkTime=0;this.syncSnares(0);}
+ get lit(){return !!this.fire&&this.fire.burning&&this.fire.fuel>0;}
+ // A laid fire waiting for a spark.
+ get laid(){return !!this.fire&&!this.fire.burning&&this.fire.fuel>0;}
+ // Place a fire just ahead of the player on the ground: burning at once, or laid to light later.
+ light(x,z,fuel,burning=true){
+  const y=terrainHeight(x,z);this.fire={x,z,y,fuel,burning};this.spit=null;this.strength.value=0;this.spitMesh.visible=false;this.group.position.set(x,y,z);this.group.visible=true;
   // Drape the glow over the local slope once, when the fire is placed.
   const p=this.glowGeometry.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,terrainHeight(x+p.getX(i),z+p.getZ(i))-y+.06);p.needsUpdate=true;this.glowGeometry.computeBoundingSphere();
   this.group.updateMatrixWorld(true);
  }
  near(player,reach=FIRE_REACH){return !!this.fire&&Math.hypot(player.x-this.fire.x,player.z-this.fire.z)<reach;}
  warming(player){return this.lit&&this.near(player);}
+ ignite(){if(this.laid)this.fire.burning=true;}
+ // One strike of the fire steel: a shower of sparks from the tinder.
+ strike(){this.sparkTime=.35;for(let i=0;i<10;i++){const a=i*2.4,s=.3+(i%4)*.25;this.sparkPositions.set([0,.12,0],i*3);this.sparkVelocity.set([Math.cos(a)*s,.6+(i%3)*.4,Math.sin(a)*s],i*3);}this.sparks.geometry.attributes.position.needsUpdate=true;this.sparks.visible=true;}
+ // Rabbits roast while the fire burns; done once they have had SPIT_HOURS of flame.
+ setSpit(){if(!this.lit||this.spit)return false;this.spit={progress:0};this.spitMesh.geometry=this.spitGeometries[0];this.spitMesh.visible=true;return true;}
+ // A spit carried over from a save, already part roasted.
+ restoreSpit(progress){if(!this.setSpit())return;this.spit.progress=progress;if(this.spitDone)this.spitMesh.geometry=this.spitGeometries[1];}
+ get spitDone(){return !!this.spit&&this.spit.progress>=SPIT_HOURS;}
+ takeSpit(){if(!this.spitDone)return false;this.spit=null;this.spitMesh.visible=false;return true;}
  // Fuel is in game hours; rain makes a fire burn faster.
- burn(hours,rain=0){if(this.fire)this.fire.fuel=Math.max(0,this.fire.fuel-hours*(1+.5*rain));}
+ burn(hours,rain=0){if(!this.lit)return;const burning=Math.min(hours,this.fire.fuel/(1+.5*rain));this.fire.fuel=Math.max(0,this.fire.fuel-hours*(1+.5*rain));
+  if(this.spit){this.spit.progress+=burning;if(this.spitDone)this.spitMesh.geometry=this.spitGeometries[1];}}
  // odds: how likely the snare is to catch at all; a run by a warren is far better than anywhere else.
  setSnare(x,z,hours,chance=random(),odds=.8){
   // Most snares take a rabbit within a few hours; some never do.
@@ -91,7 +119,8 @@ export class Camp {
  // hours: game time; dark 0..1. Visual work is skipped while the fire is out of view range.
  step(dt,hours,{dark=0,rain=0,camera=null,range=90}={}){
   if(this.fire){this.burn(dt/60,rain);const f=this.fire,visible=!camera||Math.hypot(camera.position.x-f.x,camera.position.z-f.z)<range+8;this.group.visible=visible;
-   if(visible){this.time.value+=dt;const target=Math.min(1,f.fuel/1.2);this.strength.value+=(target-this.strength.value)*Math.min(1,dt*2);this.night.value=dark;this.flames.visible=this.strength.value>.02;this.glow.visible=this.strength.value>.02;}}
+   if(visible){this.time.value+=dt;const target=f.burning?Math.min(1,f.fuel/1.2):0;this.strength.value+=(target-this.strength.value)*Math.min(1,dt*2);this.night.value=dark;this.flames.visible=this.strength.value>.02;this.glow.visible=this.strength.value>.02;}}
+  if(this.sparkTime>0){this.sparkTime-=dt;const p=this.sparkPositions,v=this.sparkVelocity;for(let i=0;i<30;i+=3){v[i+1]-=dt*3;p[i]+=v[i]*dt;p[i+1]+=v[i+1]*dt;p[i+2]+=v[i+2]*dt;}this.sparks.geometry.attributes.position.needsUpdate=true;if(this.sparkTime<=0)this.sparks.visible=false;}
   // A snare that has just caught shows its rabbit.
   let due=0;for(const s of this.snares)if(hours>=s.catchAt)due++;if(due!==this.syncedCaught)this.syncSnares(hours);
  }

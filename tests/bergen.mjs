@@ -18,6 +18,6 @@ kit.wood=0;let wood=0;while(kit.gatherWood())wood++;assert.ok(wood>=1);assert.ok
 const tight=new FieldKit(()=>0);for(const id of ['water','rations'])tight.set(id,6);tight.set('waterproof',1);tight.set('stove',1);tight.set('bedroll',1);tight.pack();
 let gathered=0;while(tight.gatherWood())gathered++;assert.ok(gathered<5,'a full bergen has no room for much wood');assert.match(tight.message,/No room|all the wood/);
 tight.eat('ration');tight.eat('ration');
-kit.raw=1;kit.cook();assert.equal(kit.cooked,1);assert.equal(kit.raw,0);
+kit.raw=1;kit.spitRabbit();kit.takeCooked();assert.equal(kit.cooked,1);assert.equal(kit.raw,0);
 kit.reset();assert.equal(JSON.stringify(kit.bergen.save()),layout,'a new attempt repacks the same layout');assert.equal(kit.wood,0);assert.equal(kit.rations,1);
 console.log('Passed bergen grid fitting, turning, moving, auto-placement, room checks, kit counts from the grid, no room for extra wood and repacking the same layout.');

@@ -1,4 +1,4 @@
-import {TIRED_HOURS,SPENT_HOURS} from './kit.js?v=sticks-1';
+import {TIRED_HOURS,SPENT_HOURS} from './kit.js?v=fire-1';
 // Hunger, thirst, cold and tiredness felt before they are read: a stomach growl, a dry swallow,
 // chattering teeth, trembling hands on the map and compass, and slow blinks. BodyCues is pure
 // timing (testable in node); BodySounds synthesises the sounds from one shared noise buffer, so
@@ -45,5 +45,8 @@ export class BodySounds {
   if(name==='growl')this.burst(context,now,1.3,'lowpass',90,14,.55*level,[[.35,230],[.7,110],[1,160]]);
   else if(name==='swallow'){this.burst(context,now,.09,'bandpass',700,3,.18*level);this.burst(context,now+.2,.12,'bandpass',420,3,.16*level);}
   else if(name==='chatter')for(let i=0;i<7;i++)this.burst(context,now+i*.075,.035,'highpass',2600,1,.07*level);
+  // Fieldcraft: a hatchet biting into dead wood, and the scrape of a fire steel.
+  else if(name==='chop'){this.burst(context,now,.12,'lowpass',420,6,.5*level,[[.5,180],[1,120]]);this.burst(context,now+.01,.05,'bandpass',1500,2,.18*level);}
+  else if(name==='strike')this.burst(context,now,.16,'highpass',3200,1,.22*level,[[1,5200]]);
  }
 }

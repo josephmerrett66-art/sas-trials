@@ -1,6 +1,6 @@
-import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=sticks-1';
-import {BergenView} from './bergen-view.js?v=sticks-1';
-import {SHAPES} from './bergen-grid.js?v=sticks-1';
+import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=fire-1';
+import {BergenView} from './bergen-view.js?v=fire-1';
+import {SHAPES} from './bergen-grid.js?v=fire-1';
 
 // Kit list before the exercise, condition notes on the pause menu, and the strain vignette.
 export class PackingView {

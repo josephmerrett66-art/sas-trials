@@ -1,3 +1,22 @@
+# Fire from the forest (overhaul phase 3)
+
+A fire is now built from things you find, then lit by hand.
+
+- **Tinder:** look down at open, dry ground away from trees and water: "Pull dry grass for tinder · G". You can carry 3 handfuls. Whittling a stick also leaves shavings you keep as tinder.
+- **Dead wood:** you now carry a hatchet (0.9 kg, packable like any kit). At a big tree the label says "Chop dead wood · G": a few swings over about 2 seconds, with the sound of each one, and two bundles of wood. Without the hatchet you still gather one bundle by hand.
+- **Kindling:** a fallen branch, the same ones you whittle sticks from.
+- **Building:** with tinder, a branch and a bundle of wood, open ground offers "Build a fire here · F". The fire lay goes down a couple of steps ahead, where you can see it above the map. It is not alight yet.
+- **Striking:** "Fire lay · Strike your fire steel · G" (or F). Each strike throws a shower of sparks with a scrape. About 2 in 5 strikes catch in the dry, fewer in rain. Then it burns as before, and you feed it wood.
+- **Roasting:** at a lit fire with a raw rabbit, "Roast rabbit · F" puts it on a spit over the flames. The label shows how far it has got. It needs the fire burning for about 45 minutes of game time, then "Take roast rabbit · G". Water is still boiled on the stove at the fire.
+- The bag's fire row shows wood, tinder and branches, with Chop, Pull grass and Build fire, Strike steel or Add to fire. The rabbit row has Roast and Take off spit. Saves keep a fire you built but have not lit, and a rabbit on the spit.
+- The cold advice lists what you still need for a fire, and the hunger advice now says to roast your rabbit.
+
+Also fixed: with whittling also on offer, a quick tap on G during a slow frame could start whittling instead of doing the labelled action. The key's state now decides before the timer does.
+
+Checks: all node tests pass, including new ones for the fire lay, striking, the spit, saving a laid fire and a spit, the bag rows, and the new labels. Browser-played start to finish: pull tinder, chop a tree, pick up a branch, build, strike until it catches, roast a rabbit and take it off. Screenshots: `artifacts/survival-fire-chop.png`, `artifacts/survival-fire-laid.png`, `artifacts/survival-fire-spit.png`. No browser errors.
+
+Performance: the spit uses two prepared shapes swapped when the rabbit is done, and the sparks are one 10-point draw shown only for a moment after a strike. There are no new lights or shadow passes, and the fire's existing glow is reused. The stress test before and after, in cloud software rendering at the same small viewport: draw calls 30 before and 30 to 31 after, CPU 2.9 to 3.5 ms before and 2.7 to 2.9 ms after, update phase 0.34 to 0.47 ms before and 0.30 to 0.35 ms after. These are all within run-to-run noise (`artifacts/survival-fire-before-performance.json`, `artifacts/survival-fire-after-performance.json`). 60 FPS on the development Mac is still not confirmed.
+
 # Rabbit warrens and snares on runs (overhaul phase 2, part 2)
 
 Rabbits now live somewhere. About two thirds of the 150 m map squares have a warren on level, open, dry ground: two low earth mounds with dark burrow mouths, droppings and bare scrapes, in the same faceted style as the springs (`warrens.js`). Most rabbits come out within about 18 m of the nearest warren (never right beside you), so a warren is where to hunt.

@@ -21,21 +21,21 @@ import {GpuTimer} from './gpu-timer.js';
 import {ForestTorch,installTorchOptics} from './torch.js?v=daycycle-1';
 import {START,makeCheckpoints,NavigationExercise} from './navigation.js?v=big-1';
 import {addCheckpointPosts,NavigationView} from './navigation-view.js?v=feedback-1';
-import {HeldNavigation} from './held-navigation.js?v=sticks-1';
-import {FieldKit} from './kit.js?v=sticks-1';
+import {HeldNavigation} from './held-navigation.js?v=fire-1';
+import {FieldKit,strikeChance,SPIT_HOURS} from './kit.js?v=fire-1';
 import {findSprings,addSprings,nearbySpring,updateSpringVisibility} from './springs.js?v=big-1';
-import {PackingView} from './packing-view.js?v=sticks-1';
-import {InventoryView} from './inventory-view.js?v=sticks-1';
+import {PackingView} from './packing-view.js?v=fire-1';
+import {InventoryView} from './inventory-view.js?v=fire-1';
 import {DayClock,formatClock} from './daycycle.js?v=1';
-import {Camp} from './camp.js?v=warrens-1';
+import {Camp} from './camp.js?v=fire-1';
 import {Wildlife} from './wildlife.js?v=warrens-1';
-import {ForestFloor} from './forest-floor.js?v=2';
+import {ForestFloor} from './forest-floor.js?v=fire-1';
 import {findWarrens,nearestWarren,WarrenView,ON_RUN_ODDS,OFF_RUN_ODDS} from './warrens.js?v=1';
 import {nearbyObstacles} from './obstacle-grid.js';
 import {VitalsHud} from './vitals-hud.js?v=fade-1';
-import {lookTarget,needBands,needAdvice} from './fieldcraft.js?v=3';
-import {BodyCues,BodySounds} from './body-cues.js?v=2';
-import {snapshot,restore,readSave,writeSave,clearSave} from './save-game.js?v=floor-1';
+import {lookTarget,needBands,needAdvice} from './fieldcraft.js?v=fire-1';
+import {BodyCues,BodySounds} from './body-cues.js?v=fire-1';
+import {snapshot,restore,readSave,writeSave,clearSave} from './save-game.js?v=fire-1';
 
 const params=new URLSearchParams(location.search),benchmark=params.has('benchmark'),benchmarkLandmark=benchmark&&/^[B-H]$/.test(params.get('landmark')??'');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9cbdd0);scene.fog=new THREE.Fog(0x9cbdd0,35,90);
@@ -118,18 +118,18 @@ function nearTree(){let best=null,bd=2.6;for(const o of nearbyObstacles(obstacle
 function rabbitInSight(){const f=forward();return wildlife.target(player,f.x,f.z);}
 // What the player is looking at decides what G (or a tap on the label on touch) does, and the
 // label under the crosshair says so. One reused object; worked out at the HUD rate and on G.
-const lookNear={reach:{}};
+const lookNear={reach:{}},spitState={done:false,progress:0};
 function currentLook(){
  const post=exercise.complete?null:exercise.nearby(player),snare=kit.packed?camp.nearSnare(player):null;
  lookNear.post=post;lookNear.postReached=!!post&&exercise.checkpoints.indexOf(post)<exercise.stage;
- if(!kit.packed){lookNear.snare=lookNear.fire=lookNear.rabbit=lookNear.tree=lookNear.branch=lookNear.stick=lookNear.carcass=lookNear.warren=null;lookNear.water=false;}
- else{lookNear.snare=snare;lookNear.snareCaught=!!snare&&clock.hours>=snare.catchAt;lookNear.fire=camp.lit&&camp.near(player)?camp.fire:null;lookNear.water=nearWater();lookNear.rabbit=rabbitInSight();lookNear.tree=nearTree();lookNear.branch=floor.nearestBranch(player);lookNear.stick=floor.nearestStick(player);lookNear.carcass=floor.nearestCarcass(player);lookNear.warren=nearestWarren(warrens,player.x,player.z,6);}
+ if(!kit.packed){lookNear.snare=lookNear.fire=lookNear.rabbit=lookNear.tree=lookNear.branch=lookNear.stick=lookNear.carcass=lookNear.warren=lookNear.laid=lookNear.spit=null;lookNear.ground=lookNear.canBuild=false;lookNear.water=false;}
+ else{lookNear.snare=snare;lookNear.snareCaught=!!snare&&clock.hours>=snare.catchAt;lookNear.fire=camp.lit&&camp.near(player)?camp.fire:null;lookNear.laid=camp.laid&&camp.near(player)?camp.fire:null;lookNear.spit=camp.spit&&camp.near(player)?(spitState.done=camp.spitDone,spitState.progress=Math.min(1,camp.spit.progress/SPIT_HOURS),spitState):null;lookNear.water=nearWater();lookNear.rabbit=rabbitInSight();lookNear.tree=nearTree();lookNear.branch=floor.nearestBranch(player);lookNear.stick=floor.nearestStick(player);lookNear.carcass=floor.nearestCarcass(player);lookNear.warren=nearestWarren(warrens,player.x,player.z,6);const open=openGround();lookNear.ground=open&&player.pitch<-.55;lookNear.canBuild=open&&!(camp.lit&&camp.near(player,40));}
  lookNear.sleepable=clock.mode!=='cycle'||clock.sleepable;
  return lookTarget(player,kit,lookNear,touch?.enabled?'touch':controllerMode?'pad':'keyboard');
 }
 // source: 'key', 'pad' or 'touch'. Aiming a throw lasts while G or X is held; a tap throws at once.
 function interact(source='key'){
- if(hold){if(hold.act==='whittle'){hold=null;say('You put the knife away.');}return;}
+ if(hold){if(hold.act==='whittle'||hold.act==='chop'){say(hold.act==='chop'?'You stop chopping.':'You put the knife away.');hold=null;}return;}
  const target=currentLook();
  if(target?.act==='throw'&&source!=='touch'){hold={act:'aim',t:0,source,start:performance.now()};return;}
  // With whittling on offer as well, a tap does the label's first action and holding whittles.
@@ -138,9 +138,11 @@ function interact(source='key'){
  if(target?.act)return fieldActions[target.act]();
  if(kit.packed&&camp.lit&&camp.near(player)&&!kit.wood)say('No wood to add. Gather dead wood beside the big trees.');
 }
+// F (RT on Xbox): strike a laid fire, roast or take a rabbit or boil water at a lit one, or build one.
 function fire(){
  if(!kit.packed)return;
- if(camp.lit&&camp.near(player))return cookFood();
+ if(camp.laid&&camp.near(player))return strikeSteel();
+ if(camp.lit&&camp.near(player)){if(camp.spitDone)return takeRoast();if(kit.raw>0&&!camp.spit)return roastRabbit();return cookFood();}
  lightFire();
 }
 // Single actions, shared by the keys and the backpack.
@@ -172,18 +174,37 @@ function stickLanded({rabbit,hit}){
 function stepHold(dt,speed,pad){
  if(!hold){heldNavigation.hold(null);return;}
  hold.t+=dt;const held=hold.source==='key'?keys.has('KeyG'):hold.source==='pad'?!!pad?.use:false;
- if(hold.act==='press'){if(performance.now()-hold.start>=300){startWhittle();return;}if(!held){const act=hold.target.act;hold=null;if(act)fieldActions[act]();}heldNavigation.hold(null);return;}
+ // A release seen late (a slow frame) is still a tap: the key state decides before the clock.
+ if(hold.act==='press'){if(!held){const act=hold.target.act;hold=null;if(act)fieldActions[act]();}else if(performance.now()-hold.start>=300)startWhittle();heldNavigation.hold(null);return;}
+ if(hold.act==='chop'){const tree=nearTree();if(speed>2.2||!tree){hold=null;say('You stop chopping.');heldNavigation.hold(null);return;}if(hold.t>=hold.swings*.7+.35){hold.swings++;bodySounds.play('chop');}if(hold.t>=CHOP_SECONDS){hold=null;if(kit.gatherWood(2))gathered.add(tree);say(kit.message);heldNavigation.hold(null);return;}heldNavigation.hold('chop',hold.t/CHOP_SECONDS);return;}
  if(hold.act==='whittle'){if(speed>2.2){hold=null;say('You stop whittling to move.');heldNavigation.hold(null);return;}if(hold.t>=WHITTLE_SECONDS){hold=null;kit.whittle();say(kit.message,6);heldNavigation.hold(null);return;}heldNavigation.hold('whittle',hold.t/WHITTLE_SECONDS);return;}
  const drawn=(performance.now()-hold.start)/600;if(!held)return releaseThrow(drawn);
  heldNavigation.hold('aim',Math.min(1,drawn));
 }
-function holdLabel(){if(!hold||hold.act==='press')return null;if(hold.act==='whittle')return `Whittling · ${Math.min(99,Math.floor(hold.t/WHITTLE_SECONDS*100))}%`;return `Aiming${performance.now()-hold.start>=600?' · steady':''} · release ${hold.source==='pad'?'X':'G'} to throw`;}
+function holdLabel(){if(!hold||hold.act==='press')return null;if(hold.act==='whittle')return `Whittling · ${Math.min(99,Math.floor(hold.t/WHITTLE_SECONDS*100))}%`;if(hold.act==='chop')return `Chopping · ${Math.min(99,Math.floor(hold.t/CHOP_SECONDS*100))}%`;return `Aiming${performance.now()-hold.start>=600?' · steady':''} · release ${hold.source==='pad'?'X':'G'} to throw`;}
 function gatherWood(){const tree=nearTree();if(!tree||!kit.packed){say('No dead wood within reach. Stand beside a big tree.');return;}if(kit.gatherWood())gathered.add(tree);say(kit.message);}
-function cookFood(){if(!kit.packed)return;if(!(camp.lit&&camp.near(player))){say('Cook beside a lit fire.');return;}kit.cook();say(kit.message);}
+// With the hatchet: a few swings, then two bundles from the tree. Moving off stops it.
+const CHOP_SECONDS=2.2;
+function startChop(){if(!kit.packed||!nearTree()||!kit.has('hatchet'))return gatherWood();hold={act:'chop',t:0,swings:0};say('Chopping dead limbs with your hatchet…',CHOP_SECONDS);}
+function cookFood(){if(!kit.packed)return;if(!(camp.lit&&camp.near(player))){say('Boil water beside a lit fire.');return;}kit.cook();say(kit.message);}
+// The fire chain: tinder from dry grass (or whittling), a branch for kindling, dead wood to burn.
+// Laying it uses one of each; then the fire steel, one strike at a time, until the tinder catches.
+function strikeSteel(){
+ if(!kit.packed||!camp.laid||!camp.near(player))return;if(!kit.has('firesteel')){say('You need a fire steel to light it.');return;}
+ camp.strike();bodySounds.play('strike');
+ if(Math.random()<strikeChance(weather.state.rain)){camp.ignite();say('The tinder catches. The kindling takes. Feed it wood as it grows.',5);view.drawMap();}
+ else say(weather.state.rain>.3?'Sparks, but the tinder is damp. Keep striking.':'Sparks. Keep striking.',2);
+}
+function roastRabbit(){if(!kit.packed||!camp.lit||!camp.near(player)||camp.spit)return;if(kit.spitRabbit())camp.setSpit();say(kit.message,5);}
+function takeRoast(){if(!kit.packed||!camp.spitDone||!camp.near(player))return;if(!kit.roomFor(['cooked'])){say('No room in your bergen for the rabbit. Eat something or make room first.');return;}camp.takeSpit();kit.takeCooked();say(kit.message,5);}
+function pullTinder(){if(!kit.packed)return;kit.gatherTinder();say(kit.message);}
+// Ground under your feet you can pull grass from or build on: dry, open and looked down at.
+function openGround(){return !nearRiver()&&!nearWater()&&!nearTree()&&!(camp.fire&&camp.near(player,3));}
 function lightFire(){
  if(!kit.packed)return;
- if(nearRiver()){say('Too wet to light a fire here.');return;}
- const fuel=kit.lightFire();if(fuel){const f=forward();camp.light(player.x+f.x*1.4,player.z+f.z*1.4,fuel);view.drawMap();}say(kit.message);
+ if(nearRiver()){say('Too wet to build a fire here.');return;}
+ if(camp.lit&&!camp.near(player,40))say('You leave your old fire to burn out.');
+ const fuel=kit.layFire();if(fuel){const f=forward();camp.light(player.x+f.x*2.6,player.z+f.z*2.6,fuel,false);view.drawMap();}say(kit.message,5);
 }
 function snare(){if(!kit.packed)return;if(nearRiver()){say('Set snares on dry ground.');return;}if(kit.setSnare()){const f=forward(),x=player.x+f.x*.8,z=player.z+f.z*.8,run=nearestWarren(warrens,x,z);camp.setSnare(x,z,clock.hours,undefined,run?ON_RUN_ODDS:OFF_RUN_ODDS);if(!run)kit.message='Snare set, but there is no rabbit sign here. Runs by a warren catch far more often.';view.drawMap();}say(kit.message,5);}
 const sleepFade=document.querySelector('#sleep-fade');let sleepTime=0;
@@ -196,7 +217,7 @@ function sleep(){
 }
 function drink(){kit.drink();say(kit.message);}
 function eat(kind=null){kit.eat(kind);say(kit.message);}
-const fieldActions={snare,register:registerPost,lift:liftSnare,stoke:stokeFire,cook:cookFood,fill,throw:()=>releaseThrow(.5),gather:gatherWood,branch:pickBranch,'pickup-stick':pickStick,'pickup-rabbit':pickRabbit,whittle:startWhittle};
+const fieldActions={chop:startChop,tinder:pullTinder,build:lightFire,strike:strikeSteel,spit:roastRabbit,take:takeRoast,boil:cookFood,snare,register:registerPost,lift:liftSnare,stoke:stokeFire,cook:cookFood,fill,throw:()=>releaseThrow(.5),gather:gatherWood,branch:pickBranch,'pickup-stick':pickStick,'pickup-rabbit':pickRabbit,whittle:startWhittle};
 view.prompt.onclick=()=>{if(touch?.enabled&&active)interact('touch');};
 function tool(name){feel.unlockAudio();if(name==='interact')interact();else view.toggle(name);keys.clear();touch?.reset();}
 for(const button of document.querySelectorAll('[data-tool]'))button.onclick=()=>tool(button.dataset.tool);
@@ -206,7 +227,7 @@ document.addEventListener('keydown',e=>{if(inventory?.open&&active){if(e.code===
 document.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderBudget.resize(innerWidth,innerHeight,devicePixelRatio);});
 touch=createTouchControls(renderer.domElement,{enabled:matchMedia('(any-pointer: coarse)').matches||params.has('touch'),canMove:()=>active&&!view.blocking&&!inventory?.open,look:(x,y)=>{player.yaw-=x*.004;player.pitch=THREE.MathUtils.clamp(player.pitch-y*.004,-Math.PI/2+.01,Math.PI/2-.01);},jump:()=>player.jumpBuffer=player.time+.12,pause});
-inventory=new InventoryView(kit,{enabled:touch.enabled,near:()=>({water:nearWater(),wet:nearRiver(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable}),actions:{...fieldActions,drink,'eat-ration':()=>eat('ration'),'eat-cooked':()=>eat('cooked'),'eat-raw':()=>eat('raw'),light:lightFire,snare,sleep,whittle:()=>{kit.whittle();say(kit.message);}},onClose:closeBag});
+inventory=new InventoryView(kit,{enabled:touch.enabled,near:()=>({water:nearWater(),wet:nearRiver(),post:exercise.complete?null:exercise.nearby(player),fire:camp.lit&&camp.near(player),laid:camp.laid&&camp.near(player),spitOn:!!camp.spit&&camp.near(player),spitDone:camp.spitDone&&camp.near(player),ground:openGround(),snare:camp.nearSnare(player),tree:!!nearTree(),rabbit:!!rabbitInSight(),sleepable:clock.mode!=='cycle'||clock.sleepable}),actions:{...fieldActions,drink,'eat-ration':()=>eat('ration'),'eat-cooked':()=>eat('cooked'),'eat-raw':()=>eat('raw'),light:lightFire,snare,sleep,whittle:()=>{kit.whittle();say(kit.message);}},onClose:closeBag});
 if(touch.enabled)hint.textContent=(savedNote?savedNote+' · ':'')+'Left joystick: move · Drag the scene: look · Tap Jump and hold Run';
 const graphics=renderer.getContext(),gpuTimer=new GpuTimer(graphics),adapterExtension=graphics.getExtension('WEBGL_debug_renderer_info'),adapter=adapterExtension?graphics.getParameter(adapterExtension.UNMASKED_RENDERER_WEBGL):graphics.getParameter(graphics.RENDERER),frameMonitor=new FrameMonitor();
 let benchmarkStart=0,benchmarkDone=false,benchmarkWarm=false,benchmarkProbe=false,benchmarkResult=null;
