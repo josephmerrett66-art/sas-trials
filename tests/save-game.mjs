@@ -20,7 +20,7 @@ const a=world();
 a.kit.pack();a.kit.hydration=61.25;a.kit.energy=48;a.kit.warmth=73;a.kit.awake=9.5;a.kit.wet=.4;a.kit.water=.8;a.kit.untreated=.3;a.kit.message='Drank 0.2 L';
 a.kit.wood=2;a.kit.cooked=1;
 Object.assign(a.player,{x:140.5,z:-320.25,yaw:1.2,pitch:-.3,stamina:42});
-a.clock.hours=20.75;a.camp.light(141,-318,1.5);a.camp.setSpit();a.camp.spit.progress=.3;a.camp.setSnare(150,-322,a.clock.hours,.1);
+a.clock.hours=20.75;a.camp.light(141,-318,1.5);a.camp.setSpit();a.camp.spit.progress=.3;a.camp.setPot(.8,.1);a.camp.pitch(145,-316,1.1,'tarp');a.camp.setSnare(150,-322,a.clock.hours,.1);
 a.exercise.stage=3;a.exercise.distance=1834.4;a.exercise.elevation=211;a.gathered.add(a.obstacles[2]).add(a.obstacles[7]);
 const save=snapshot(a);
 assert.ok(writeSave(save,storage));const text=store.get(SAVE_KEY);assert.ok(text.length<4000,`a save stays small (${text.length} bytes)`);
@@ -36,7 +36,7 @@ assert.deepEqual(b.kit.layout,a.kit.layout,'resetting later still repacks the ch
 assert.equal(b.player.x,140.5);assert.equal(b.player.z,-320.25);assert.equal(b.player.yaw,1.2);assert.equal(b.player.stamina,42);
 assert.ok(Math.abs(b.player.y-terrainHeight(140.5,-320.25))<1e-9,'you stand on the ground where you saved');
 assert.equal(b.clock.hours,20.75);
-assert.ok(b.camp.fire&&b.camp.fire.x===141&&Math.abs(b.camp.fire.fuel-1.5)<1e-9,'the fire is still burning');assert.equal(b.camp.lit,true);assert.ok(b.camp.spit&&Math.abs(b.camp.spit.progress-.3)<1e-9,'the rabbit is still on the spit');
+assert.ok(b.camp.fire&&b.camp.fire.x===141&&Math.abs(b.camp.fire.fuel-1.5)<1e-9,'the fire is still burning');assert.equal(b.camp.lit,true);assert.ok(b.camp.spit&&Math.abs(b.camp.spit.progress-.3)<1e-9,'the rabbit is still on the spit');assert.deepEqual({...b.camp.pot},{litres:.8,progress:.1},'the mess tin is still on');assert.equal(b.camp.shelter.kind,'tarp');assert.equal(b.camp.shelter.x,145);assert.equal(b.camp.bashaMesh.visible,true,'the basha stands where you pitched it');
 assert.equal(b.camp.snares.length,1);assert.equal(b.camp.snares[0].catchAt,a.camp.snares[0].catchAt,'a set snare keeps its catch time');
 assert.equal(b.exercise.stage,3);assert.equal(b.exercise.distance,1834.4);
 assert.deepEqual([...b.gathered],[b.obstacles[2],b.obstacles[7]],'trees you already took wood from stay bare');
@@ -44,7 +44,7 @@ assert.deepEqual([...b.gathered],[b.obstacles[2],b.obstacles[7]],'trees you alre
 // A snare that will never catch survives JSON (Infinity is not valid JSON).
 const c=world();c.kit.pack();c.camp.setSnare(10,10,8,.95);assert.equal(c.camp.snares[0].catchAt,Infinity);
 const back=JSON.parse(JSON.stringify(snapshot(c)));const d=world();assert.ok(restore(back,d));assert.equal(d.camp.snares[0].catchAt,Infinity);
-assert.equal(d.camp.fire,null);
+assert.equal(d.camp.fire,null);assert.equal(d.camp.shelter,null);assert.equal(d.camp.pot,null);
 // A built fire not yet struck comes back unlit; old saves without the flag come back burning.
 c.camp.light(5,5,2,false);let r=world();assert.ok(restore(JSON.parse(JSON.stringify(snapshot(c))),r));assert.equal(r.camp.laid,true);assert.equal(r.camp.lit,false);
 const old=JSON.parse(JSON.stringify(snapshot(c)));delete old.camp.fire.burning;delete old.camp.spit;r=world();assert.ok(restore(old,r));assert.equal(r.camp.lit,true);

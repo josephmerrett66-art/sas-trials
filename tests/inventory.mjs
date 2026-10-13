@@ -18,6 +18,12 @@ for(const id of ['chop','tinder','light','fill','throw','lift','sleep'])assert.e
 assert.equal(backpackRows(kit,{wet:true}).flatMap(r=>r.actions).find(a=>a.act==='light').enabled,false,'no fires in the river');
 assert.equal(act(backpackRows(kit,{laid:true}),'strike').enabled,true,'a built fire is struck');
 kit.raw=1;rows=backpackRows(kit,{fire:true});assert.equal(act(rows,'spit').enabled,true);assert.equal(act(backpackRows(kit,{fire:true,spitOn:true}),'spit').enabled,false,'one rabbit on the spit at a time');assert.equal(act(backpackRows(kit,{fire:true,spitOn:true,spitDone:true}),'take').enabled,true);assert.equal(act(rows,'stoke').enabled,true);assert.equal(act(rows,'light'),undefined,'a lit fire is stoked, not lit');
+// Camp: a basha needs two branches and open ground; boiling water uses the mess tin on the fire.
+const camper=new FieldKit(()=>1);camper.set('stove',1);camper.set('filter',0);camper.pack();camper.branches=2;
+assert.equal(act(backpackRows(camper,{}),'pitch').enabled,false,'not on open ground');assert.equal(act(backpackRows(camper,{canPitch:true}),'pitch').enabled,true);
+rows=backpackRows(camper,{shelter:true,sleepable:true});assert.equal(act(rows,'pitch').label,'Basha up');assert.equal(act(rows,'sleep').label,'Sleep');assert.match(rows.find(r=>r.id==='sleep').detail,/Under your basha/);
+assert.equal(act(backpackRows(camper,{sleepable:true}),'sleep').label,'Sleep rough');
+camper.water=0;camper.refill();assert.equal(act(backpackRows(camper,{fire:true}),'boil').enabled,true);assert.equal(act(backpackRows(camper,{fire:true,potOn:true}),'boil').enabled,false,'one tin on the fire');assert.equal(act(backpackRows(camper,{fire:true,potOn:true,potDone:true}),'take-pot').enabled,true);
 // Choosing what to eat.
 kit.cooked=1;kit.energy=10;assert.equal(kit.eat('ration'),true);assert.equal(kit.cooked,1,'eating a ration keeps the cooked rabbit');assert.equal(kit.rations,0);
 assert.equal(kit.eat('raw'),true);assert.equal(kit.raw,0);assert.equal(kit.rations,0);assert.equal(kit.cooked,1,'eating raw keeps rations and cooked meat');

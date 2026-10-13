@@ -2,9 +2,9 @@ import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {terrainHeight} from './terrain.js?v=big-1';
 import {rabbitGeometry} from './wildlife.js?v=warrens-1';
-import {SPIT_HOURS} from './kit.js?v=fire-1';
+import {SPIT_HOURS,BOIL_HOURS} from './kit.js?v=camp-1';
 
-export const FIRE_REACH=4,SNARE_REACH=2.2,MAX_SNARES=4;
+export const FIRE_REACH=4,SNARE_REACH=2.2,MAX_SNARES=4,SHELTER_REACH=3.2;
 let seed=9127;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const tint=(geometry,color)=>{const c=new THREE.Color(color),n=geometry.attributes.position.count,colors=new Float32Array(n*3);for(let i=0;i<n;i++)c.toArray(colors,i*3);geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));return geometry;};
 const place=(geometry,x,y,z,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>{const o=new THREE.Object3D();o.position.set(x,y,z);o.rotation.set(rx,ry,rz);o.scale.set(sx,sy,sz);o.updateMatrix();return geometry.applyMatrix4(o.matrix);};
@@ -42,6 +42,27 @@ function spitGeometry(roasted){
  if(roasted){const c=rabbit.attributes.color;for(let i=0;i<c.count;i++)c.setXYZ(i,c.getX(i)*.62,c.getY(i)*.42,c.getZ(i)*.3);}
  parts.push(rabbit);return mergeGeometries(parts);
 }
+// A mess tin on the hearth stones, with its folding handle; boiled, with a puff of steam over it.
+function potGeometry(boiled){
+ const parts=[tint(place(flat(new THREE.CylinderGeometry(.09,.08,.11,8)),0,.2,0),0x8a9094),tint(place(flat(new THREE.CylinderGeometry(.085,.085,.01,8)),0,.25,0),boiled?0xc9d3d6:0x56707a),tint(place(flat(new THREE.BoxGeometry(.24,.012,.02)),.16,.22,0),0x6d7276)];
+ if(boiled)for(const [x,y,z,r] of [[-.02,.38,-.01,.05],[.03,.5,.02,.065],[-.03,.64,-.02,.07]])parts.push(tint(place(flat(new THREE.IcosahedronGeometry(r,0)),x,y,z),0xe6eaeb));
+ // On the stones at the front edge of the hearth, clear of the spit's stakes.
+ return mergeGeometries(parts).translate(.3,0,.5);
+}
+// A lean-to two metres wide: forked uprights and a ridge pole cut from branches, with a roof
+// sloping back to the ground. The open side (+z) faces the fire. kind: 'tarp' or 'debris'.
+function bashaGeometry(kind){
+ const parts=[],slope=Math.atan2(1.05,1.7),length=Math.hypot(1.05,1.7);
+ for(const x of [-.95,.95]){parts.push(tint(place(flat(new THREE.CylinderGeometry(.03,.04,1.15,5)),x,.56,0,0,0,x<0?.06:-.06),0x6f4f33));parts.push(tint(place(flat(new THREE.CylinderGeometry(.018,.025,1.95,5)),x*.98,.52,-.85,Math.PI/2-slope),0x5c412a));}
+ parts.push(tint(place(flat(new THREE.CylinderGeometry(.03,.03,2.15,5)),0,1.08,0,0,0,Math.PI/2),0x8b7154));
+ if(kind==='tarp'){parts.push(tint(place(flat(new THREE.BoxGeometry(2.2,.02,length+.1)),0,.54,-.85,-slope),0x4d5a3a));for(const x of [-1.08,1.08])parts.push(tint(place(flat(new THREE.CylinderGeometry(.006,.006,.7,3)),x,.55,.25,.9),0xb7b4a6));}
+ else{let k=31;const rnd=()=>{k=(Math.imul(k,1664525)+1013904223)>>>0;return k/4294967296;};
+  for(let i=0;i<5;i++){const t=(i+.5)/5;parts.push(tint(place(flat(new THREE.BoxGeometry(2.15,.06,length/5+.2)),(rnd()-.5)*.08,1.05*(1-t)+.04,-1.7*t,-slope+(rnd()-.5)*.08),[0x7a5a33,0x6b4b2a,0x87683c][i%3]));}
+  for(let i=0;i<9;i++){const t=rnd(),x=(rnd()-.5)*2;parts.push(tint(place(flat(new THREE.IcosahedronGeometry(.12+rnd()*.06,0)),x,1.05*(1-t)+.08,-1.7*t,0,rnd()*6,0,1.4,.5,1),i%2?0x8a4f24:0x6d6a32));}}
+ // Bedding of bracken on the ground under the roof.
+ parts.push(tint(place(flat(new THREE.BoxGeometry(.8,.05,1.6)),0,.03,-.55),0x76603a));
+ return mergeGeometries(parts);
+}
 function snareGeometry(){
  const stake=tint(place(flat(new THREE.CylinderGeometry(.018,.025,.45,5)),0,.2,0,.12,0,0),0x7b5a3a);
  const loop=tint(place(flat(new THREE.TorusGeometry(.09,.006,3,8)),.08,.12,0,0,Math.PI/2,0),0xb7b4a6);
@@ -72,18 +93,21 @@ export class Camp {
   // A few pooled sparks for each strike of the fire steel; hidden between strikes.
   this.sparkPositions=new Float32Array(30);this.sparkVelocity=new Float32Array(30);const sparkGeometry=new THREE.BufferGeometry();sparkGeometry.setAttribute('position',new THREE.BufferAttribute(this.sparkPositions,3));
   this.sparks=new THREE.Points(sparkGeometry,new THREE.PointsMaterial({color:0xffc26b,size:.05,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));this.sparks.visible=false;this.sparks.frustumCulled=false;this.sparkTime=0;
-  this.group.add(this.hearth,this.flames,this.glow,this.spitMesh,this.sparks);scene.add(this.group);
+  this.potGeometries=[potGeometry(false),potGeometry(true)];this.potMesh=new THREE.Mesh(this.potGeometries[0],solid);this.potMesh.visible=false;
+  this.group.add(this.hearth,this.flames,this.glow,this.spitMesh,this.potMesh,this.sparks);scene.add(this.group);
+  // One basha at a time; pitching a new one moves it. Either roof is prepared up front.
+  this.bashaGeometries={tarp:bashaGeometry('tarp'),debris:bashaGeometry('debris')};this.bashaMesh=new THREE.Mesh(this.bashaGeometries.tarp,solid);this.bashaMesh.name='Basha';this.bashaMesh.visible=false;this.bashaMesh.receiveShadow=true;scene.add(this.bashaMesh);
   this.snareMesh=new THREE.InstancedMesh(snareGeometry(),solid,MAX_SNARES);this.snareMesh.name='Snares';this.snareMesh.count=0;this.snareMesh.frustumCulled=false;scene.add(this.snareMesh);
   this.caughtMesh=new THREE.InstancedMesh(rabbitGeometry(),solid,MAX_SNARES);this.caughtMesh.name='Snared rabbits';this.caughtMesh.count=0;this.caughtMesh.frustumCulled=false;scene.add(this.caughtMesh);
   this.matrix=new THREE.Matrix4();this.transform=new THREE.Object3D();this.reset();
  }
- reset(){this.fire=null;this.spit=null;this.snares=[];this.group.visible=false;this.spitMesh.visible=false;this.sparks.visible=false;this.sparkTime=0;this.syncSnares(0);}
+ reset(){this.fire=null;this.spit=null;this.pot=null;this.shelter=null;this.snares=[];this.group.visible=false;this.spitMesh.visible=false;this.potMesh.visible=false;this.bashaMesh.visible=false;this.sparks.visible=false;this.sparkTime=0;this.syncSnares(0);}
  get lit(){return !!this.fire&&this.fire.burning&&this.fire.fuel>0;}
  // A laid fire waiting for a spark.
  get laid(){return !!this.fire&&!this.fire.burning&&this.fire.fuel>0;}
  // Place a fire just ahead of the player on the ground: burning at once, or laid to light later.
  light(x,z,fuel,burning=true){
-  const y=terrainHeight(x,z);this.fire={x,z,y,fuel,burning};this.spit=null;this.strength.value=0;this.spitMesh.visible=false;this.group.position.set(x,y,z);this.group.visible=true;
+  const y=terrainHeight(x,z);this.fire={x,z,y,fuel,burning};this.spit=null;this.pot=null;this.strength.value=0;this.spitMesh.visible=false;this.potMesh.visible=false;this.group.position.set(x,y,z);this.group.visible=true;
   // Drape the glow over the local slope once, when the fire is placed.
   const p=this.glowGeometry.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,terrainHeight(x+p.getX(i),z+p.getZ(i))-y+.06);p.needsUpdate=true;this.glowGeometry.computeBoundingSphere();
   this.group.updateMatrixWorld(true);
@@ -99,9 +123,18 @@ export class Camp {
  restoreSpit(progress){if(!this.setSpit())return;this.spit.progress=progress;if(this.spitDone)this.spitMesh.geometry=this.spitGeometries[1];}
  get spitDone(){return !!this.spit&&this.spit.progress>=SPIT_HOURS;}
  takeSpit(){if(!this.spitDone)return false;this.spit=null;this.spitMesh.visible=false;return true;}
+ // A mess tin of water boils while the fire burns, done after BOIL_HOURS of flame.
+ setPot(litres,progress=0){if(!this.lit||this.pot||!(litres>0))return false;this.pot={litres,progress};this.potMesh.geometry=this.potGeometries[this.potDone?1:0];this.potMesh.visible=true;return true;}
+ get potDone(){return !!this.pot&&this.pot.progress>=BOIL_HOURS;}
+ // Returns the litres in the tin once it has boiled, otherwise 0.
+ takePot(){if(!this.potDone)return 0;const litres=this.pot.litres;this.pot=null;this.potMesh.visible=false;return litres;}
+ // Pitch the basha at (x,z) with its open side facing yaw. Only one stands at a time.
+ pitch(x,z,yaw,kind){const y=terrainHeight(x,z);this.shelter={x,z,y,yaw,kind};this.bashaMesh.geometry=this.bashaGeometries[kind]??this.bashaGeometries.debris;this.bashaMesh.position.set(x,y-.04,z);this.bashaMesh.rotation.set(0,yaw,0);this.bashaMesh.visible=true;this.bashaMesh.updateMatrixWorld(true);}
+ nearShelter(player,reach=SHELTER_REACH){return !!this.shelter&&Math.hypot(player.x-this.shelter.x,player.z-this.shelter.z)<reach;}
  // Fuel is in game hours; rain makes a fire burn faster.
  burn(hours,rain=0){if(!this.lit)return;const burning=Math.min(hours,this.fire.fuel/(1+.5*rain));this.fire.fuel=Math.max(0,this.fire.fuel-hours*(1+.5*rain));
-  if(this.spit){this.spit.progress+=burning;if(this.spitDone)this.spitMesh.geometry=this.spitGeometries[1];}}
+  if(this.spit){this.spit.progress+=burning;if(this.spitDone)this.spitMesh.geometry=this.spitGeometries[1];}
+  if(this.pot){this.pot.progress+=burning;if(this.potDone)this.potMesh.geometry=this.potGeometries[1];}}
  // odds: how likely the snare is to catch at all; a run by a warren is far better than anywhere else.
  setSnare(x,z,hours,chance=random(),odds=.8){
   // Most snares take a rabbit within a few hours; some never do.
@@ -121,6 +154,7 @@ export class Camp {
   if(this.fire){this.burn(dt/60,rain);const f=this.fire,visible=!camera||Math.hypot(camera.position.x-f.x,camera.position.z-f.z)<range+8;this.group.visible=visible;
    if(visible){this.time.value+=dt;const target=f.burning?Math.min(1,f.fuel/1.2):0;this.strength.value+=(target-this.strength.value)*Math.min(1,dt*2);this.night.value=dark;this.flames.visible=this.strength.value>.02;this.glow.visible=this.strength.value>.02;}}
   if(this.sparkTime>0){this.sparkTime-=dt;const p=this.sparkPositions,v=this.sparkVelocity;for(let i=0;i<30;i+=3){v[i+1]-=dt*3;p[i]+=v[i]*dt;p[i+1]+=v[i+1]*dt;p[i+2]+=v[i+2]*dt;}this.sparks.geometry.attributes.position.needsUpdate=true;if(this.sparkTime<=0)this.sparks.visible=false;}
+  if(this.shelter)this.bashaMesh.visible=!camera||Math.hypot(camera.position.x-this.shelter.x,camera.position.z-this.shelter.z)<range+8;
   // A snare that has just caught shows its rabbit.
   let due=0;for(const s of this.snares)if(hours>=s.catchAt)due++;if(due!==this.syncedCaught)this.syncSnares(hours);
  }

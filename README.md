@@ -1,3 +1,17 @@
+# Camp and night (overhaul phase 4)
+
+The day now ends somewhere you made: a fire, a basha, and water boiled for the morning.
+
+- **Basha:** with two fallen branches, open ground offers "Pitch a basha · Z" (LT on Xbox). About 4 seconds of work puts up a lean-to two steps ahead, open side towards you. If you carry the sleeping bag and bivvy, the bivvy sheet makes the roof; otherwise it is thatched with dead bracken. One basha stands at a time, and pitching another more than 40 m away moves it. Saves keep it.
+- **Sleep depends on where you are:** Z under your basha after dusk ("Basha · Sleep · Z") gives a full night. Anywhere else it is a broken sleep of at most 3 hours that leaves you still tired, and the message says to pitch a basha. You still need a fire or a sleeping bag to sleep at all. Under the basha, rain and wind chill you much less, and the bivvy sheet keeps more rain off than bracken does.
+- **Boiling water takes time:** with the stove and mess tin, "Boil water · F" at a lit fire pours your untreated water into the tin on the hearth stones. After about 15 minutes of game time (15 seconds) the label shows "Take boiled water", with steam over the tin, and the water goes back in your bottles, safe to drink. Saves keep a tin on the fire.
+- The bag's camp row shows whether you have a basha or how many branches you have towards one, with Pitch basha and Sleep (or Sleep rough). The water row has Boil and Take boiled water.
+- The tiredness advice now says to make camp after dusk with a fire and a basha from two fallen branches.
+
+Checks: all node tests pass, with new ones for the basha (branches used, sheet or bracken roof, one at a time, saving), sleep by location (broken in the open, rain under each roof), the mess tin (one at a time, needs a lit fire, boils over time, steam when done, saving), the labels and the bag rows. Browser-played: pitch a basha with Z, build and light a fire, boil untreated water and take it off, then sleep under the basha at dusk. Screenshots: `artifacts/survival-camp-dusk.png`, `artifacts/survival-camp-boil.png`, `artifacts/survival-basha-tarp.png`, `artifacts/survival-basha-bracken.png`. No browser errors.
+
+Performance: the basha is one mesh with both roofs prepared up front, and it is not drawn when far away. The mess tin is one small mesh shown only while it is on the fire, with two prepared shapes. There are no new lights, materials or shadow passes. The stress test before and after, in cloud software rendering at the same small viewport: draw calls 28 to 31 before and 30 to 31 after, CPU 2.9 to 3.7 ms before and 3.1 ms after, update phase 0.39 to 0.48 ms before and 0.34 to 0.44 ms after. These are all within run-to-run noise (`artifacts/survival-camp-before-performance.json`, `artifacts/survival-camp-after-performance.json`). 60 FPS on the development Mac is still not confirmed.
+
 # Fire from the forest (overhaul phase 3)
 
 A fire is now built from things you find, then lit by hand.

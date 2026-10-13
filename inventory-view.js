@@ -1,13 +1,13 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,MAX_TINDER} from './kit.js?v=fire-1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,MAX_TINDER,BASHA_BRANCHES} from './kit.js?v=camp-1';
 import {BergenView} from './bergen-view.js?v=fire-1';
 
 // What the backpack shows: each thing you carry with what you can do with it here and now.
 // Pure data so it can be tested without a page. near: what is within reach of the player.
 export function backpackRows(kit,near){
- const {water=false,post=null,fire=false,laid=false,spitOn=false,spitDone=false,snare=null,tree=false,ground=false,rabbit=false,sleepable=false,wet=false}=near,rows=[];
+ const {water=false,post=null,fire=false,laid=false,spitOn=false,spitDone=false,potOn=false,potDone=false,shelter=false,canPitch=false,snare=null,tree=false,ground=false,rabbit=false,sleepable=false,wet=false}=near,rows=[];
  const row=(id,name,detail,actions)=>rows.push({id,name,detail,actions:actions.map(([act,label,enabled])=>({act,label,enabled:!!enabled}))});
  if(post)row('post',`Checkpoint ${post.code}`,'You are at the post.',[['register',`Register ${post.code}`,true]]);
- row('water','Water',kit.bottles?`${kit.water.toFixed(1)} of ${kit.bottles} L${kit.untreated>.001?` · ${kit.untreated.toFixed(1)} L untreated`:''}`:'No bottles',[['drink','Drink',kit.water>.001],['fill',water?'Fill':'No water near',water],...(kit.has('stove')?[['boil',fire?'Boil':'Boil at a fire',fire&&kit.untreated>.001]]:[])]);
+ row('water','Water',kit.bottles?`${kit.water.toFixed(1)} of ${kit.bottles} L${kit.untreated>.001?` · ${kit.untreated.toFixed(1)} L untreated`:''}`:'No bottles',[['drink','Drink',kit.water>.001],['fill',water?'Fill':'No water near',water],...(kit.has('stove')?[potDone?['take-pot','Take boiled water',true]:['boil',potOn?'Boiling':fire?'Boil':'Boil at a fire',fire&&!potOn&&kit.untreated>.001]]:[])]);
  row('rations','Rations',`${kit.rations} pack${kit.rations===1?'':'s'}${kit.has('stove')?' · eaten hot':''}`,[['eat-ration','Eat',kit.rations>0]]);
  row('rabbit','Rabbit',`${kit.cooked} cooked · ${kit.raw} raw${spitOn?(spitDone?' · roast on the spit is done':' · one roasting on the spit'):''}`,[['eat-cooked','Eat cooked',kit.cooked>0],spitDone?['take','Take off spit',true]:['spit',fire?'Roast':'Roast at a fire',fire&&kit.raw>0&&!spitOn],['eat-raw','Eat raw',kit.raw>0]]);
  // A fire needs tinder, a branch for kindling and dead wood; it is built, then struck alight.
@@ -18,7 +18,9 @@ export function backpackRows(kit,near){
  row('snares','Snare wire',`${kit.snares} left${snare?' · snare here':''}`,[['snare','Set snare',kit.snares>0&&!wet],['lift','Lift snare',!!snare]]);
  const sticks=`${kit.sticks} stick${kit.sticks===1?'':'s'} · ${kit.branches} branch${kit.branches===1?'':'es'}`;
  row('stick','Throwing stick',kit.sticks?`${sticks}${rabbit?' · a rabbit in front of you':''}`:kit.branches?`${sticks} · whittle one with your knife`:'Find a straight branch under the trees',[['whittle','Whittle',kit.branches>0],['throw','Throw',rabbit&&kit.sticks>0]]);
- row('sleep',kit.has('bedroll')?'Sleeping bag':'Sleep',sleepable?(fire?'By the fire':kit.has('bedroll')?'In your bag':'Needs a fire or a sleeping bag'):'Make camp after 19:30',[['sleep','Sleep',sleepable]]);
+ // Sleep is only a full night under a basha; anywhere else it is short and broken.
+ const warm=fire?'by the fire':kit.has('bedroll')?'in your bag':'needs a fire or a sleeping bag';
+ row('sleep','Camp',`${shelter?'Under your basha':`No basha · ${kit.branches} of ${BASHA_BRANCHES} branches`} · ${sleepable?warm:'sleep after 19:30'}`,[['pitch',shelter?'Basha up':'Pitch basha',!shelter&&canPitch&&kit.branches>=BASHA_BRANCHES],['sleep',shelter?'Sleep':'Sleep rough',sleepable]]);
  return rows;
 }
 const GEAR=[['hatchet','hatchet'],['firesteel','fire steel'],['filter','water filter'],['stove','stove and mess tin'],['waterproof','waterproof'],['bedroll','sleeping bag']];

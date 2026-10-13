@@ -11,7 +11,7 @@ export function snapshot({kit,player,clock,camp,exercise,gathered,obstacles,floo
   kit:{...Object.fromEntries(KIT_FIELDS.map(k=>[k,round(kit[k])])),bergen:kit.bergen.save(),layout:kit.layout},
   player:{x:round(player.x),z:round(player.z),yaw:round(player.yaw),pitch:round(player.pitch),stamina:round(player.stamina)},
   clock:{hours:round(clock.hours)},
-  camp:{fire:camp.fire?{x:camp.fire.x,z:camp.fire.z,fuel:round(camp.fire.fuel),burning:camp.fire.burning}:null,spit:camp.spit?{progress:round(camp.spit.progress)}:null,snares:camp.snares.map(({x,z,set,catchAt,yaw})=>({x,z,set,catchAt:Number.isFinite(catchAt)?catchAt:null,yaw}))},
+  camp:{fire:camp.fire?{x:camp.fire.x,z:camp.fire.z,fuel:round(camp.fire.fuel),burning:camp.fire.burning}:null,spit:camp.spit?{progress:round(camp.spit.progress)}:null,pot:camp.pot?{litres:round(camp.pot.litres),progress:round(camp.pot.progress)}:null,shelter:camp.shelter?{x:round(camp.shelter.x),z:round(camp.shelter.z),yaw:round(camp.shelter.yaw),kind:camp.shelter.kind}:null,snares:camp.snares.map(({x,z,set,catchAt,yaw})=>({x,z,set,catchAt:Number.isFinite(catchAt)?catchAt:null,yaw}))},
   exercise:{stage:exercise.stage,distance:round(exercise.distance),elevation:round(exercise.elevation)},
   gathered:[...gathered].map(o=>index.get(o)).filter(i=>i!==undefined),
   // Branches taken, your stick where it lies and any rabbit left on the ground. Optional: older saves have none.
@@ -25,7 +25,8 @@ export function restore(save,{kit,player,clock,camp,exercise,gathered,obstacles,
  for(const k of KIT_FIELDS)if(k in save.kit)kit[k]=save.kit[k];kit.packed=true;
  player.reset();Object.assign(player,{x:save.player.x,z:save.player.z,yaw:save.player.yaw,pitch:save.player.pitch,stamina:save.player.stamina??100});player.y=groundHeight(player.x,player.z);
  clock.hours=save.clock.hours;
- camp.reset();if(save.camp.fire&&save.camp.fire.fuel>0){camp.light(save.camp.fire.x,save.camp.fire.z,save.camp.fire.fuel,save.camp.fire.burning??true);if(save.camp.spit&&camp.lit)camp.restoreSpit(save.camp.spit.progress);}
+ camp.reset();if(save.camp.fire&&save.camp.fire.fuel>0){camp.light(save.camp.fire.x,save.camp.fire.z,save.camp.fire.fuel,save.camp.fire.burning??true);if(save.camp.spit&&camp.lit)camp.restoreSpit(save.camp.spit.progress);if(save.camp.pot&&camp.lit)camp.setPot(save.camp.pot.litres,save.camp.pot.progress);}
+ if(save.camp.shelter)camp.pitch(save.camp.shelter.x,save.camp.shelter.z,save.camp.shelter.yaw,save.camp.shelter.kind==='tarp'?'tarp':'debris');
  for(const s of save.camp.snares)camp.snares.push({x:s.x,z:s.z,y:groundHeight(s.x,s.z),set:s.set,catchAt:s.catchAt??Infinity,yaw:s.yaw});camp.syncSnares(clock.hours);
  exercise.reset();exercise.stage=Math.min(save.exercise.stage,exercise.checkpoints.length);exercise.distance=save.exercise.distance;exercise.elevation=save.exercise.elevation;
  gathered.clear();for(const i of save.gathered)if(obstacles[i])gathered.add(obstacles[i]);

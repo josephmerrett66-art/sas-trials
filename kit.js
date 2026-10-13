@@ -8,13 +8,17 @@ export const ITEMS=[
  {id:'waterproof',name:'Waterproof jacket',note:'Rain no longer saps your energy.',weight:1.1,max:1,start:0},
  {id:'stove',name:'Stove and mess tin',note:'Hot rations restore more energy. Boil water at a fire.',weight:1.4,max:1,start:0},
  {id:'firesteel',name:'Fire steel',note:'Light a fire from gathered wood.',weight:.1,max:1,start:1},
- {id:'bedroll',name:'Sleeping bag and bivvy',note:'Sleep warm without a fire.',weight:1.8,max:1,start:0},
+ {id:'bedroll',name:'Sleeping bag and bivvy',note:'Sleep warm without a fire. The bivvy sheet roofs a basha against the rain.',weight:1.8,max:1,start:0},
  {id:'snares',name:'Snare wire',note:'Set a snare and come back for a rabbit.',weight:.1,max:4,start:2},
  {id:'hatchet',name:'Hatchet',note:'Chop two bundles of dead wood from a tree instead of gathering one.',weight:.9,max:1,start:1}
 ];
 export const LITRE=1,BOTTLE_EMPTY=.15,RATION_WEIGHT=.6,WOOD_WEIGHT=.8,MEAT_WEIGHT=.5,MAX_WOOD=5,BRANCH_WEIGHT=.35,TINDER_WEIGHT=.05,MAX_TINDER=3;
 // A spit-roasted rabbit is done after this many game hours on a burning fire.
 export const SPIT_HOURS=.75;
+// A mess tin of water is boiled after this many game hours on a burning fire.
+export const BOIL_HOURS=.25;
+// A basha (lean-to) takes two branches for its frame; sleep away from one is short and broken.
+export const BASHA_BRANCHES=2,BROKEN_SLEEP_HOURS=3;
 // The chance one strike of the fire steel catches the tinder; rain makes it harder.
 export const strikeChance=(rain=0)=>.4*(1-.6*Math.min(1,rain));
 // Hours of burn per bundle of firewood, and how long a fire may be stocked for.
@@ -118,11 +122,21 @@ export class FieldKit {
   if(fuel>=MAX_FUEL-.5){this.message='The fire is well stocked.';return fuel;}
   this.wood--;this.message='Added wood to the fire.';return Math.min(MAX_FUEL,fuel+BURN_PER_WOOD);
  }
- // At a fire, with a mess tin: boil untreated water safe.
- cook(){
-  if(!this.packed||this.withdrawn)return false;
-  if(!(this.untreated>.001&&this.has('stove'))){this.message=this.untreated>.001?'A mess tin would let you boil this water.':'Nothing to boil.';return false;}
-  this.message=`Boiled ${this.untreated.toFixed(1)} L. Safe to drink.`;this.untreated=0;return true;
+ // At a fire, with a mess tin: pour the untreated water in to boil. Returns the litres, or 0.
+ boilWater(){
+  if(!this.packed||this.withdrawn)return 0;
+  if(!(this.untreated>.001&&this.has('stove'))){this.message=this.untreated>.001?'A mess tin would let you boil this water.':'Nothing to boil. Your water is safe.';return 0;}
+  const litres=this.untreated;this.water=Math.max(0,this.water-litres);this.untreated=0;this.message=`${litres.toFixed(1)} L in the mess tin on the fire. Wait for it to boil.`;return litres;
+ }
+ // Pour boiled water back into the bottles.
+ takeBoiled(litres){if(!this.packed||this.withdrawn)return false;const room=Math.max(0,this.bottles*LITRE-this.water),kept=Math.min(room,litres);this.water+=kept;this.message=`Boiled ${kept.toFixed(1)} L. Safe to drink.`;return true;}
+ // A basha: two branches for the frame, roofed with the bivvy sheet if you carry it, else with
+ // dead bracken and leaves. Returns 'tarp', 'debris' or null.
+ buildBasha(){
+  if(!this.packed||this.withdrawn)return null;
+  if(this.branches<BASHA_BRANCHES){this.message=`A basha needs ${BASHA_BRANCHES} branches for its frame. You have ${this.branches}.`;return null;}
+  for(let i=0;i<BASHA_BRANCHES;i++)this.bergen.removeOne('branch');
+  const tarp=this.has('bedroll');this.message=tarp?'Basha up: your bivvy sheet over a branch frame. Sleep under it.':'Basha up: a branch frame thatched with dead bracken. Sleep under it.';return tarp?'tarp':'debris';
  }
  // Rabbits roast on a spit over the fire: one goes on, and comes off cooked when it is done.
  spitRabbit(){if(!this.packed||this.withdrawn||!this.bergen.removeOne('raw')){this.message='No rabbit to roast.';return false;}this.message='Rabbit on the spit. Keep the fire going until it is done.';return true;}
@@ -151,16 +165,20 @@ export class FieldKit {
  throwStick(){if(!this.packed||this.withdrawn||!this.bergen.removeOne('stick'))return false;return true;}
  pickUpStick(){if(!this.packed||this.withdrawn)return false;if(!this.bergen.autoPlace('stick')){this.message='No room in your bergen for the stick. Rearrange it (Tab) first.';return false;}this.message='Got your throwing stick back.';return true;}
  pickUpRabbit(){if(!this.packed||this.withdrawn)return false;if(!this.bergen.autoPlace('raw')){this.message='No room in your bergen for the rabbit. Rearrange it (Tab) or eat something first.';return false;}this.message='Rabbit in the bergen. Cook it at a fire before you eat it.';return true;}
- // Sleep through the night. Returns the hours actually slept (a fire that dies, or no
- // shelter, wakes you early). fire: hours of fuel left; rain: 0..1.
- sleep(hours,{fire=0,rain=0}={}){
+ // Sleep through the night. Returns the hours actually slept (a fire that dies wakes you early).
+ // fire: hours of fuel left; rain: 0..1; shelter: null, 'debris' or 'tarp'. Without a basha
+ // over you, sleep is short and broken whatever else you have.
+ sleep(hours,{fire=0,rain=0,shelter=null}={}){
   if(!this.packed||this.withdrawn||hours<=0)return 0;
   const bag=this.has('bedroll');
   if(fire<=0&&!bag){this.message='Too cold to sleep. Light a fire or carry a sleeping bag.';return 0;}
+  if(!shelter)hours=Math.min(hours,BROKEN_SLEEP_HOURS);
+  // A basha keeps most of the rain and wind off: the sheet better than bracken.
+  const cover=shelter==='tarp'?.15:shelter==='debris'?.4:1,draught=shelter?.7:1;
   let slept=0;const step=1/12;
   while(slept<hours-1e-9){
    const h=Math.min(step,hours-slept),warm=fire-slept>0;
-   const loss=warm?-20:(bag?3:9)+rain*(bag?2:8)*(this.has('waterproof')?.5:1);
+   const loss=warm?-20:(bag?3:9)*draught+rain*(bag?2:8)*(this.has('waterproof')?.5:1)*cover;
    this.warmth=Math.max(0,Math.min(100,this.warmth-loss*h));
    this.hydration=Math.max(0,this.hydration-2.5*h);this.energy=Math.max(0,this.energy-1*h);this.wet=Math.max(0,this.wet-h);
    slept+=h;if(this.warmth<=15)break;
@@ -168,7 +186,7 @@ export class FieldKit {
   if(slept>hours-1e-6)slept=hours;
   this.awake=slept>=5?0:Math.max(0,this.awake-slept*3);this.sick=0;
   const burnedOut=fire>0&&fire<slept;
-  this.message=this.warmth<=15?'Woke shivering. Get warm.':slept>=5?(burnedOut&&!bag?'Slept, but the fire died in the night. You wake cold.':'Slept through the night.'):'A short, broken sleep.';
+  this.message=this.warmth<=15?'Woke shivering. Get warm.':slept>=5?(burnedOut&&!bag?'Slept, but the fire died in the night. You wake cold.':'Slept through the night under your basha.'):shelter?'A short, broken sleep.':'A short, broken sleep in the open. Pitch a basha with two branches for a full night.';
   return slept;
  }
  // effort: 0 standing, 1 walking, about 1.6 sprinting. climb: metres gained this step.
