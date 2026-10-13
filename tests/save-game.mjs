@@ -4,6 +4,7 @@ import {FieldKit} from '../kit.js';
 import {Controller} from '../controller.js';
 import {DayClock} from '../daycycle.js';
 import {Camp} from '../camp.js';
+import {Orders} from '../orders.js';
 import {NavigationExercise,makeCheckpoints} from '../navigation.js';
 import {terrainHeight} from '../terrain.js';
 import {snapshot,restore,readSave,writeSave,clearSave,SAVE_KEY} from '../save-game.js';
@@ -13,7 +14,7 @@ const store=new Map(),storage={getItem:k=>store.get(k)??null,setItem:(k,v)=>stor
 const broken={getItem(){throw new Error('blocked');},setItem(){throw new Error('blocked');},removeItem(){throw new Error('blocked');}};
 
 const world=()=>{const kit=new FieldKit(()=>.5),player=new Controller(terrainHeight),clock=new DayClock(),camp=new Camp(new THREE.Scene()),exercise=new NavigationExercise(makeCheckpoints([]));
- const obstacles=Array.from({length:10},(_,i)=>({x:i,z:i}));return {kit,player,clock,camp,exercise,gathered:new Set(),obstacles,groundHeight:terrainHeight};};
+ const obstacles=Array.from({length:10},(_,i)=>({x:i,z:i}));return {kit,player,clock,camp,exercise,gathered:new Set(),obstacles,orders:new Orders(),groundHeight:terrainHeight};};
 
 // Play a little of a run: repack, walk, burn time, light a fire, set a snare, take a post.
 const a=world();
@@ -21,7 +22,7 @@ a.kit.pack();a.kit.hydration=61.25;a.kit.energy=48;a.kit.warmth=73;a.kit.awake=9
 a.kit.wood=2;a.kit.cooked=1;
 Object.assign(a.player,{x:140.5,z:-320.25,yaw:1.2,pitch:-.3,stamina:42});
 a.clock.hours=20.75;a.camp.light(141,-318,1.5);a.camp.setSpit();a.camp.spit.progress=.3;a.camp.setPot(.8,.1);a.camp.pitch(145,-316,1.1,'tarp');a.camp.setSnare(150,-322,a.clock.hours,.1);
-a.exercise.stage=3;a.exercise.distance=1834.4;a.exercise.elevation=211;a.gathered.add(a.obstacles[2]).add(a.obstacles[7]);
+a.orders.register('C',a.kit,14);a.orders.ate('cooked');a.exercise.stage=3;a.exercise.distance=1834.4;a.exercise.elevation=211;a.gathered.add(a.obstacles[2]).add(a.obstacles[7]);
 const save=snapshot(a);
 assert.ok(writeSave(save,storage));const text=store.get(SAVE_KEY);assert.ok(text.length<4000,`a save stays small (${text.length} bytes)`);
 
@@ -38,7 +39,7 @@ assert.ok(Math.abs(b.player.y-terrainHeight(140.5,-320.25))<1e-9,'you stand on t
 assert.equal(b.clock.hours,20.75);
 assert.ok(b.camp.fire&&b.camp.fire.x===141&&Math.abs(b.camp.fire.fuel-1.5)<1e-9,'the fire is still burning');assert.equal(b.camp.lit,true);assert.ok(b.camp.spit&&Math.abs(b.camp.spit.progress-.3)<1e-9,'the rabbit is still on the spit');assert.deepEqual({...b.camp.pot},{litres:.8,progress:.1},'the mess tin is still on');assert.equal(b.camp.shelter.kind,'tarp');assert.equal(b.camp.shelter.x,145);assert.equal(b.camp.bashaMesh.visible,true,'the basha stands where you pitched it');
 assert.equal(b.camp.snares.length,1);assert.equal(b.camp.snares[0].catchAt,a.camp.snares[0].catchAt,'a set snare keeps its catch time');
-assert.equal(b.exercise.stage,3);assert.equal(b.exercise.distance,1834.4);
+assert.equal(b.exercise.stage,3);assert.deepEqual(b.orders.save(),a.orders.save(),'the DS orders and record come back');assert.equal(b.exercise.distance,1834.4);
 assert.deepEqual([...b.gathered],[b.obstacles[2],b.obstacles[7]],'trees you already took wood from stay bare');
 
 // A snare that will never catch survives JSON (Infinity is not valid JSON).

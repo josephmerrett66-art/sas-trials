@@ -1,4 +1,4 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,MAX_TINDER,BASHA_BRANCHES} from './kit.js?v=camp-1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,MAX_TINDER,BASHA_BRANCHES} from './kit.js?v=orders-1';
 import {BergenView} from './bergen-view.js?v=fire-1';
 
 // What the backpack shows: each thing you carry with what you can do with it here and now.

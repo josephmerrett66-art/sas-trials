@@ -5,7 +5,7 @@ export const SAVE_KEY='sas-trials-save',SAVE_VERSION=1;
 const KIT_FIELDS=['hydration','energy','warmth','awake','wet','water','untreated','sick','empty','cold','withdrawn','message','time'];
 const round=v=>typeof v==='number'?Math.round(v*1000)/1000:v;
 
-export function snapshot({kit,player,clock,camp,exercise,gathered,obstacles,floor=null}){
+export function snapshot({kit,player,clock,camp,exercise,gathered,obstacles,floor=null,orders=null}){
  const index=new Map(obstacles.map((o,i)=>[o,i]));
  return {version:SAVE_VERSION,saved:Date.now(),
   kit:{...Object.fromEntries(KIT_FIELDS.map(k=>[k,round(kit[k])])),bergen:kit.bergen.save(),layout:kit.layout},
@@ -15,11 +15,11 @@ export function snapshot({kit,player,clock,camp,exercise,gathered,obstacles,floo
   exercise:{stage:exercise.stage,distance:round(exercise.distance),elevation:round(exercise.elevation)},
   gathered:[...gathered].map(o=>index.get(o)).filter(i=>i!==undefined),
   // Branches taken, your stick where it lies and any rabbit left on the ground. Optional: older saves have none.
-  floor:floor?.save()??null};
+  floor:floor?.save()??null,orders:orders?.save()??null};
 }
 
 // Restores a packed run in place. Returns false (changing nothing) for an unusable save.
-export function restore(save,{kit,player,clock,camp,exercise,gathered,obstacles,floor=null,groundHeight}){
+export function restore(save,{kit,player,clock,camp,exercise,gathered,obstacles,floor=null,orders=null,groundHeight}){
  if(!save||save.version!==SAVE_VERSION||!save.kit||!Array.isArray(save.kit.bergen))return false;
  kit.reset();kit.layout=save.kit.layout??save.kit.bergen;kit.bergen.load(save.kit.bergen);
  for(const k of KIT_FIELDS)if(k in save.kit)kit[k]=save.kit[k];kit.packed=true;
@@ -30,7 +30,7 @@ export function restore(save,{kit,player,clock,camp,exercise,gathered,obstacles,
  for(const s of save.camp.snares)camp.snares.push({x:s.x,z:s.z,y:groundHeight(s.x,s.z),set:s.set,catchAt:s.catchAt??Infinity,yaw:s.yaw});camp.syncSnares(clock.hours);
  exercise.reset();exercise.stage=Math.min(save.exercise.stage,exercise.checkpoints.length);exercise.distance=save.exercise.distance;exercise.elevation=save.exercise.elevation;
  gathered.clear();for(const i of save.gathered)if(obstacles[i])gathered.add(obstacles[i]);
- floor?.load(save.floor);
+ floor?.load(save.floor);orders?.load(save.orders);
  return true;
 }
 

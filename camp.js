@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {terrainHeight} from './terrain.js?v=big-1';
 import {rabbitGeometry} from './wildlife.js?v=warrens-1';
-import {SPIT_HOURS,BOIL_HOURS} from './kit.js?v=camp-1';
+import {SPIT_HOURS,BOIL_HOURS} from './kit.js?v=orders-1';
 
 export const FIRE_REACH=4,SNARE_REACH=2.2,MAX_SNARES=4,SHELTER_REACH=3.2;
 let seed=9127;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};

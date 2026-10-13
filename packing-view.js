@@ -1,11 +1,11 @@
-import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=camp-1';
+import {ITEMS,BASE_WEIGHT,packWeight,loadPace,hydrationWord,energyWord,warmthWord,fatigueWord} from './kit.js?v=orders-1';
 import {BergenView} from './bergen-view.js?v=fire-1';
 import {SHAPES} from './bergen-grid.js?v=fire-1';
 
 // Kit list before the exercise, condition notes on the pause menu, and the strain vignette.
 export class PackingView {
- constructor(kit,{onStepOff,clock=null}){
-  this.kit=kit;this.clock=clock;this.menu=document.querySelector('#menu');this.panel=document.querySelector('#packing');this.condition=document.querySelector('#condition');this.vignette=document.querySelector('#strain');this.lastStrain=-1;
+ constructor(kit,{onStepOff,clock=null,report=null}){
+  this.kit=kit;this.clock=clock;this.report=report;this.menu=document.querySelector('#menu');this.panel=document.querySelector('#packing');this.condition=document.querySelector('#condition');this.vignette=document.querySelector('#strain');this.lastStrain=-1;
   // The kit list is a tray beside the bergen: drag (or tap) an item into a space where it fits.
   const list=this.panel.querySelector('#kit-list');
   list.innerHTML=`<li class="fixed"><span><strong>Bergen, clothing, map, compass, torch, knife</strong><small>Always carried.</small></span><span class="kg">${BASE_WEIGHT.toFixed(1)} kg</span></li>`+ITEMS.map(item=>`<li data-item="${item.id}"><button type="button" class="tray-item" data-add="${item.id}" aria-label="Pack ${item.name}"><i class="shape" style="--w:${SHAPES[item.id][0]};--h:${SHAPES[item.id][1]}" data-kind="${item.id}"></i><span><strong>${item.name}</strong><small>${item.note}</small></span></button><span class="kg">${item.weight.toFixed(item.weight<1?2:1)} kg</span><span class="count"><output></output><button type="button" data-remove aria-label="Unpack one ${item.name}">−</button></span></li>`).join('');
@@ -30,7 +30,9 @@ export class PackingView {
  // Paused: full condition report in the menu. Playing: only the edge vignette.
  update(active){
   const kit=this.kit;
-  if(!active&&kit.packed){this.condition.hidden=false;this.condition.innerHTML=kit.withdrawn?`<strong>Medically withdrawn: ${kit.withdrawn}.</strong> Reset the exercise to repack and try again.`:`<span>Hydration <b>${hydrationWord(kit.hydration)}</b> ${Math.round(kit.hydration)}%</span><span>Energy <b>${energyWord(kit.energy)}</b> ${Math.round(kit.energy)}%</span><span>Warmth <b>${warmthWord(kit.warmth)}</b> ${Math.round(kit.warmth)}%</span><span>Sleep <b>${fatigueWord(kit.awake)}</b> · ${Math.round(kit.awake)} h awake</span>${this.clock?`<span><b>${this.clock.label}</b></span>`:''}<span>Water <b>${kit.water.toFixed(1)} L</b></span><span>Rations <b>${kit.rations}</b></span><span>Rabbit <b>${kit.cooked} cooked${kit.raw?`, ${kit.raw} raw`:''}</b></span><span>Wood <b>${kit.wood}</b></span><span>Pack <b>${kit.weight.toFixed(1)} kg</b> · ${Math.round(kit.pace*100)}% pace</span>${kit.sick>0?'<span><b>Unwell</b> from untreated water</span>':''}`;}
+  // Mid-run the pause menu shows your condition and orders in place of the opening brief.
+  if(this.inRun!==kit.packed){this.inRun=kit.packed;this.menu.classList.toggle('in-run',kit.packed);}
+  if(!active&&kit.packed){this.condition.hidden=false;this.condition.innerHTML=kit.withdrawn?`<strong>Medically withdrawn: ${kit.withdrawn}.</strong> Reset the exercise to repack and try again.`:`<span>Hydration <b>${hydrationWord(kit.hydration)}</b> ${Math.round(kit.hydration)}%</span><span>Energy <b>${energyWord(kit.energy)}</b> ${Math.round(kit.energy)}%</span><span>Warmth <b>${warmthWord(kit.warmth)}</b> ${Math.round(kit.warmth)}%</span><span>Sleep <b>${fatigueWord(kit.awake)}</b> · ${Math.round(kit.awake)} h awake</span>${this.clock?`<span><b>${this.clock.label}</b></span>`:''}<span>Water <b>${kit.water.toFixed(1)} L</b></span><span>Rations <b>${kit.rations}</b></span><span>Rabbit <b>${kit.cooked} cooked${kit.raw?`, ${kit.raw} raw`:''}</b></span><span>Wood <b>${kit.wood}</b></span><span>Pack <b>${kit.weight.toFixed(1)} kg</b> · ${Math.round(kit.pace*100)}% pace</span>${kit.sick>0?'<span><b>Unwell</b> from untreated water</span>':''}${this.report?`<span class="orders">${this.report()}</span>`:''}`;}
   else if(!kit.packed)this.condition.hidden=true;
   const strain=active?Math.round(kit.strain*20)/20:0;if(strain!==this.lastStrain){this.lastStrain=strain;this.vignette.style.opacity=String(strain*.85);}
  }

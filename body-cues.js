@@ -1,4 +1,4 @@
-import {TIRED_HOURS,SPENT_HOURS} from './kit.js?v=camp-1';
+import {TIRED_HOURS,SPENT_HOURS} from './kit.js?v=orders-1';
 // Hunger, thirst, cold and tiredness felt before they are read: a stomach growl, a dry swallow,
 // chattering teeth, trembling hands on the map and compass, and slow blinks. BodyCues is pure
 // timing (testable in node); BodySounds synthesises the sounds from one shared noise buffer, so

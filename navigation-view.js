@@ -17,7 +17,7 @@ export function addCheckpointPosts(scene,points){
  return groups;
 }
 export class NavigationView {
- constructor(exercise,{springs=[],kit=null,rivers=[],clock=null,camp=null}={}){
+ constructor(exercise,{springs=[],kit=null,rivers=[],clock=null,camp=null,orders=null}={}){this.orders=orders;
   this.exercise=exercise;this.springs=springs;this.rivers=rivers;this.clock=clock;this.camp=camp;this.kit=kit;this.renderedNotes=null;this.panel=null;this.renderedStage=-1;
   this.map=document.querySelector('#map-sheet');this.journal=document.querySelector('#assignment');this.notice=document.querySelector('#nav-notice');this.prompt=document.querySelector('#nav-prompt');this.summary=document.querySelector('#completion');
   this.chart=document.querySelector('#nav-chart');this.chart.width=800;this.chart.height=800;this.updateAssignment();
@@ -56,7 +56,9 @@ export class NavigationView {
   ctx.textAlign='center';ctx.font='bold 24px monospace';
   const mark=(p,text,color)=>{ctx.strokeStyle=color;ctx.fillStyle='#f5ecd6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(px(p.x),pz(p.z),10,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=color;ctx.fillText(text,px(p.x)+22,pz(p.z)-14);};
   mark(START,'START','#303b31');for(const p of this.exercise.revealed)mark(p,p.code,p===this.exercise.current?'#8e3e2d':'#52614d');
-  ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m · Blue: water`,48,772);
+  ctx.textAlign='left';ctx.font='14px monospace';ctx.fillStyle='#303b31';// Once you step off, the DS's current orders are pencilled where the legend was.
+  if(this.orders&&this.kit?.packed){const text=`DS: ${this.orders.order(this.exercise.stage,this.exercise.checkpoints.length)}`;ctx.font='bold 14px monospace';const width=ctx.measureText(text).width;if(width>704)ctx.font=`bold ${Math.floor(14*704/width)}px monospace`;ctx.fillStyle='#8e3e2d';ctx.fillText(text,48,772);}
+  else ctx.fillText(`N ↑ · E → / N ↑ from SW corner · Grid ${WORLD_SIZE/8} m · Elevation 7 m · Blue: water`,48,772);
   // Kit and condition, pencilled along the bottom margin.
   // Your own camp marks: the last fire and any snares you have set.
   if(this.camp){ctx.lineWidth=3;if(this.camp.fire){ctx.beginPath();ctx.arc(px(this.camp.fire.x),pz(this.camp.fire.z),7,0,Math.PI*2);ctx.fillStyle='#c8642d';ctx.fill();ctx.strokeStyle='#4a3c2a';ctx.stroke();}ctx.strokeStyle='#4a3c2a';for(const s of this.camp.snares){const x=px(s.x),y=pz(s.z);ctx.beginPath();ctx.moveTo(x-6,y-6);ctx.lineTo(x+6,y+6);ctx.moveTo(x+6,y-6);ctx.lineTo(x-6,y+6);ctx.stroke();}}

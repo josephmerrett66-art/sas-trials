@@ -78,10 +78,10 @@ export class FieldKit {
   const rawOnly=kind==='raw'||(this.cooked<=0&&this.rations<=0);
   if(kind==='ration'&&this.rations<=0){this.message='No rations left.';return false;}
   if(kind==='cooked'&&this.cooked<=0){this.message='No cooked meat.';return false;}
-  if(!rawOnly&&this.cooked>0&&kind!=='ration'){this.cooked--;this.energy=Math.min(100,this.energy+45);this.warmth=Math.min(100,this.warmth+10);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
-  if(rawOnly&&this.raw>0){this.raw--;this.energy=Math.min(100,this.energy+15);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
+  if(!rawOnly&&this.cooked>0&&kind!=='ration'){this.cooked--;this.lastEaten='cooked';this.energy=Math.min(100,this.energy+45);this.warmth=Math.min(100,this.warmth+10);this.message=`Ate cooked rabbit · ${this.cooked} left`;return true;}
+  if(rawOnly&&this.raw>0){this.raw--;this.lastEaten='raw';this.energy=Math.min(100,this.energy+15);if(this.random()<.5){this.sick=SICK_SECONDS;this.message='Ate raw rabbit. Your stomach turns.';}else this.message='Ate raw rabbit. Cook it next time.';return true;}
   if(this.rations<=0){this.message='No food left.';return false;}
-  this.rations--;const hot=this.has('stove');this.energy=Math.min(100,this.energy+(hot?45:30));
+  this.rations--;this.lastEaten='ration';const hot=this.has('stove');this.energy=Math.min(100,this.energy+(hot?45:30));
   this.message=`${hot?'Hot ration':'Cold ration'} eaten · ${this.rations} left`;return true;
  }
  refill(){

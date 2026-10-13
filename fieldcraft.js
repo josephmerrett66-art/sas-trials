@@ -1,4 +1,4 @@
-import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,LITRE,MAX_TINDER,BASHA_BRANCHES} from './kit.js?v=camp-1';
+import {hydrationWord,energyWord,warmthWord,fatigueWord,MAX_WOOD,LITRE,MAX_TINDER,BASHA_BRANCHES} from './kit.js?v=orders-1';
 // What the player is looking at and what G does to it, and the short inner-voice advice when a
 // need gets worse. Pure: no DOM or rendering, so it can be tested in node.
 

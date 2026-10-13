@@ -1,3 +1,17 @@
+# DS orders and the debrief (overhaul phase 5)
+
+The survival work is now part of selection. The DS gives orders for each leg of the course, checks them at the posts, and reads out a record at the end. Missing an order is a warning in the debrief, never a failure.
+
+- **Leg 1, posts A to C:** "Rations are issued for today only: the DS takes what is left at C." At post C the DS takes every ration left in your bergen: "From here you live off the land." From then on, food comes from hunting and trapping.
+- **Leg 2, posts D and E:** "Make camp by dark: a lit fire, a basha, and a cooked meal." At 21:30 on the night after post C (the next night if you reach C after 19:00), the DS walks through. You need a lit fire within 10 m of your basha, to be at your camp, and to have eaten a cooked rabbit since post C (or have one in your bergen). If you go to sleep before 21:30, your camp is judged as you lie down, so a fire that dies in the night doesn't count against you.
+- **Leg 3, posts F to H:** "Arrive at each with at least a litre of safe water." The DS checks filtered or boiled water at each post.
+- **Where the orders show:** the result line when you step off and at each post, a red pencilled line across the bottom of your map, and the pause menu. Once you are under way, the pause menu drops the opening brief and shows your condition, the orders in force and the record so far. When the circuit is complete it shows the debrief.
+- The opening brief and the controls line mention the new chain: rations until post C, then building a fire and a basha.
+
+Checks: all node tests pass. The new tests/orders.mjs covers the orders by stage, rations taken once at C, the camp deadline (same night or the next), every camp shortfall (no fire, no basha, too far apart, away from camp, no cooked meal), water at F to H, the debrief lines and saving. The save test now round-trips the orders. Browser-played start to finish: register A to C (the DS takes the ration), let the camp deadline pass with no camp (the DS notes what is missing), register D to H with too little safe water at F, then pause for the debrief. Screenshot: `artifacts/survival-orders-debrief.png`. No browser errors.
+
+Performance: the orders are a few comparisons at the 10 Hz HUD rate and a map redraw when the stage changes. There is nothing new in the scene. The stress test before and after, in cloud software rendering at the same small viewport: draw calls 29 to 30 before and 30 after, CPU 3.4 ms both, update phase 0.40 to 0.51 ms before and 0.39 to 0.41 ms after (`artifacts/survival-orders-before-performance.json`, `artifacts/survival-orders-after-performance.json`). 60 FPS on the development Mac is still not confirmed.
+
 # Camp and night (overhaul phase 4)
 
 The day now ends somewhere you made: a fire, a basha, and water boiled for the morning.
