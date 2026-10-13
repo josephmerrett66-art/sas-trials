@@ -32,8 +32,9 @@ function lookAt(player,kit,near,keys){
  if(stick&&facing(player,stick.x,stick.z,reach.pick??2.2))return {act:'pickup-stick',label:verb('Pick up your stick',keys.use)};
  if(fire&&facing(player,fire.x,fire.z,reach.fire??4)){
   // G (or a tap) does the first of these; the others keep their own keys. spit, pot: {done,progress}.
-  const parts=[],boil=kit.untreated>.001&&kit.has('stove')&&!pot;let act=null;
-  const add=(name,text)=>{const key=act?keys.fire:keys.use;act??=name;parts.push(verb(text,key));};
+  // alt is what F (RT) does and camp what Z (LT) does, so each key does exactly what its label says.
+  const parts=[],boil=kit.untreated>.001&&kit.has('stove')&&!pot;let act=null,alt=null,camp=null;
+  const add=(name,text)=>{if(!act){act=name;parts.push(verb(text,keys.use));}else if(!alt){alt=name;parts.push(verb(text,keys.fire));}else parts.push(text);};
   if(spit?.done)add('take','Take roast rabbit');
   else if(pot?.done)add('take-pot','Take boiled water');
   if(kit.wood>0)add('stoke','Add wood');
@@ -41,12 +42,12 @@ function lookAt(player,kit,near,keys){
   else if(boil)add('boil','Boil water');
   if(spit&&!spit.done)parts.push(`Rabbit roasting · ${Math.floor(spit.progress*100)}%`);
   if(pot&&!pot.done)parts.push(`Water boiling · ${Math.floor(pot.progress*100)}%`);
-  if(sleepable&&keys.sleep&&shelter)parts.push(verb('Sleep',keys.sleep));
-  return {act,label:parts.length?`Campfire · ${parts.join('   ')}`:'Campfire · gather wood to keep it going'};
+  if(sleepable&&keys.sleep&&shelter){camp='sleep';parts.push(verb('Sleep',keys.sleep));}
+  return {act,label:parts.length?`Campfire · ${parts.join('   ')}`:'Campfire · gather wood to keep it going',...(alt?{alt}:{}),...(camp?{camp}:{})};
  }
  if(laid&&facing(player,laid.x,laid.z,reach.fire??4))return {act:'strike',label:verb('Fire lay · Strike your fire steel',keys.use)};
  // Your basha: Z sleeps under it (a tap on touch), but only once it is dark enough.
- if(shelter&&facing(player,shelter.x,shelter.z,reach.shelter??3.2,1))return sleepable?{act:'sleep',label:`Basha · ${verb('Sleep',keys.sleep??keys.use)}`}:{act:null,label:'Basha · sleep here after dusk'};
+ if(shelter&&facing(player,shelter.x,shelter.z,reach.shelter??3.2,1))return sleepable?{act:'sleep',label:`Basha · ${verb('Sleep',keys.sleep??keys.use)}`,camp:'sleep'}:{act:null,label:'Basha · sleep here after dusk'};
  if(water){
   if(!kit.bottles)return {act:'fill',label:verb('Drink from the water',keys.use)};
   return kit.bottles*LITRE-kit.water>.001?{act:'fill',label:verb(kit.has('filter')?'Fill bottles':'Fill bottles · untreated',keys.use)}:{act:null,label:'Water · bottles full'};
@@ -60,13 +61,12 @@ function lookAt(player,kit,near,keys){
  if(branch&&facing(player,branch.x,branch.z,reach.pick??2.2))return {act:'branch',label:verb('Pick up branch',keys.use)};
  if(tree&&facing(player,tree.x,tree.z,reach.tree??2.6,tree.radius??0))return kit.wood<MAX_WOOD?(kit.has('hatchet')?{act:'chop',label:verb('Chop dead wood',keys.use)}:{act:'gather',label:verb('Gather dead wood',keys.use)}):{act:null,label:`Dead wood · carrying ${MAX_WOOD} bundles`};
  // Open ground at your feet: pull dry grass for tinder, and build a fire when you have it all.
- const parts=[];let act=null;
+ const parts=[];let act=null,alt=null,camp=null;
  if(ground&&kit.tinder<MAX_TINDER){act='tinder';parts.push(verb('Pull dry grass for tinder',keys.use));}
- if(canBuild&&!kit.fireMissing.length){parts.push(verb('Build a fire here',act?keys.fire:keys.fire??keys.use));act??='build';}
+ if(canBuild&&!kit.fireMissing.length){parts.push(verb('Build a fire here',act?keys.fire:keys.fire??keys.use));act??='build';alt='build';}
  // Two branches make a basha frame: Z (or LT) pitches it here, facing you.
- const pitch=canBuild&&!shelter&&kit.branches>=BASHA_BRANCHES;
- if(pitch){parts.push(verb('Pitch a basha',act?keys.sleep:keys.sleep??keys.use));act??='pitch';}
- return parts.length?{act,label:parts.join('   '),...(pitch?{pitch:true}:{})}:null;
+ if(canBuild&&!shelter&&kit.branches>=BASHA_BRANCHES){parts.push(verb('Pitch a basha',act?keys.sleep:keys.sleep??keys.use));act??='pitch';camp='pitch';}
+ return parts.length?{act,label:parts.join('   '),...(alt?{alt}:{}),...(camp?{camp}:{})}:null;
 }
 
 // Need bands, worst last. A band only counts as worse when it moves further down this list.

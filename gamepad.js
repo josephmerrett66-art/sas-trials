@@ -14,7 +14,17 @@ export class GamepadInput {
     if(this.index!==pad.index){this.previous=[];this.index=pad.index;}
     const buttons=pad.buttons.map(b=>b.pressed);
     const pressed=i=>!!buttons[i]&&!this.previous[i];
-    const result={move:stick(pad.axes[0],pad.axes[1],deadzone),look:stick(pad.axes[2],pad.axes[3],deadzone,lookCurve,.98),jump:!!buttons[0],jumpPressed:pressed(0),crouch:!!buttons[1],sprint:!!buttons[10],pause:pressed(9),mapPressed:pressed(8),respawn:pressed(3),aim:!!pad.buttons[6]?.pressed||((pad.buttons[6]?.value??0)>.2),fire:!!buttons[7],meleePressed:pressed(11),nextPressed:pressed(5),previousPressed:pressed(4),firePressed:pressed(7),reloadPressed:pressed(2),use:!!buttons[2],healPressed:pressed(12),drinkPressed:pressed(13),campPressed:pressed(6),bagPressed:pressed(11),backPressed:pressed(1),leftPressed:pressed(14),rightPressed:pressed(15),leanLeft:!!buttons[14],leanRight:!!buttons[15],id:pad.id};
+    // The Xbox layout (standard mapping indices in brackets). Every survival choice lives in the
+    // bag; out in the world only X, RT and LT act, and only on what the look-at label names.
+    //  A [0] jump, or choose in the bag · B [1] crouch, or close the bag · X [2] use (hold to whittle or aim)
+    //  Y [3] open or close the bag · LB/RB [4/5] lean · LT [6] / RT [7] the label's other actions
+    //  View [8] map · Menu [9] pause · LS click [10] sprint · RS click [11] also the bag
+    //  D-pad [12-15] or a flick of the left stick: move between actions in the bag
+    const flick=(axis,sign)=>sign*pad.axes[axis]>.6,flicks=[flick(1,-1),flick(1,1),flick(0,-1),flick(0,1)],was=this.flicks??[false,false,false,false],flicked=i=>flicks[i]&&!was[i];this.flicks=flicks;
+    const result={move:stick(pad.axes[0],pad.axes[1],deadzone),look:stick(pad.axes[2],pad.axes[3],deadzone,lookCurve,.98),jump:!!buttons[0],jumpPressed:pressed(0),crouch:!!buttons[1],sprint:!!buttons[10],pause:pressed(9),mapPressed:pressed(8),
+      use:!!buttons[2],usePressed:pressed(2),bagPressed:pressed(3)||pressed(11),backPressed:pressed(1),firePressed:pressed(7),campPressed:pressed(6),
+      upPressed:pressed(12)||flicked(0),downPressed:pressed(13)||flicked(1),leftPressed:pressed(14)||flicked(2),rightPressed:pressed(15)||flicked(3),
+      leanLeft:!!buttons[4],leanRight:!!buttons[5],id:pad.id};
     this.previous=buttons;return result;
   }
 }

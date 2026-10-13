@@ -2,7 +2,7 @@ import {ForestTorch,installTorchOptics} from './torch.js?v=no-ink-1';
 import {terrainHeight,WORLD_SIZE} from './terrain.js';
 import * as THREE from './vendor/three.module.js';
 import {Controller,defaults} from './controller.js?v=no-ink-1';
-import {GamepadInput} from './gamepad.js?v=no-ink-1';
+import {GamepadInput} from './gamepad.js?v=pad-1';
 import {SurvivalThreats} from './survival-threats.js?v=no-ink-1';
 import {Survival} from './survival.js?v=no-ink-1';
 import {PlayerLean,leanInput} from './lean.js?v=no-ink-1';

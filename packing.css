@@ -45,7 +45,8 @@ body.touch-mode #kit-sheet{top:auto;transform:none;bottom:calc(166px + env(safe-
 body.touch-mode .kit-sheet-head small{display:none}
 #kit-sheet button{min-height:34px;border-radius:3px;background:#334034;color:#f4eddc;padding:0 10px;font:600 12px 'DM Sans',sans-serif;border:0;cursor:pointer;touch-action:manipulation}
 body.touch-mode #kit-sheet button{min-height:44px}
-#kit-sheet button:focus-visible{outline:2px solid #b5562f;outline-offset:2px}
+#kit-sheet button:focus-visible,#kit-sheet .kit-acts button:focus{outline:2px solid #b5562f;outline-offset:2px}
+#kit-sheet .kit-acts button:focus{background:#b5562f;color:#fff8ec}
 #kit-sheet .kit-sheet-head button{background:transparent;color:#303b31;text-decoration:underline;padding:0 4px}
 #kit-sheet button:disabled{opacity:.3;cursor:default}
 .kit-condition{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin:8px 0 6px;color:#4a5142}

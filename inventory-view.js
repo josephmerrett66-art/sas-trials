@@ -25,7 +25,7 @@ export function backpackRows(kit,near){
 }
 const GEAR=[['hatchet','hatchet'],['firesteel','fire steel'],['filter','water filter'],['stove','stove and mess tin'],['waterproof','waterproof'],['bedroll','sleeping bag']];
 
-// One backpack for every input: Tab or I on a keyboard, right stick click on Xbox, or the BAG
+// One backpack for every input: Tab or I on a keyboard, Y on Xbox, or the BAG
 // button on screen. Rebuilt only when what it shows changes; arrow keys or the D-pad move
 // between actions and Enter, Space or A uses one.
 export class InventoryView {
@@ -39,6 +39,8 @@ export class InventoryView {
   this.bergenView=typeof document.createElement==='function'?new BergenView(this.sheet.querySelector('#kit-bergen'),kit.bergen,{cell:enabled?30:32,onChange:()=>{this.rendered='';this.render();}}):null;this.layoutKey='';
   this.body.onclick=e=>{const button=e.target.closest?.('button[data-act]');if(button&&!button.disabled)this.use(button.dataset.act);};
  }
+ // The key shown on the BAG button follows the input in use: Tab, Y on Xbox, nothing on touch.
+ setKey(key){if(this.key===key)return;this.key=key;this.toggleButton.innerHTML=key?`BAG <kbd>${key}</kbd>`:'BAG';}
  get open(){return !this.sheet.hidden;}
  show(){this.sheet.hidden=false;this.toggleButton.setAttribute('aria-expanded','true');this.rendered='';this.render();this.focusFirst();}
  hide(){this.bergenView?.cancel();if(this.sheet.hidden)return;this.sheet.hidden=true;this.toggleButton.setAttribute('aria-expanded','false');}

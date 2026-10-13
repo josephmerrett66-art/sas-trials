@@ -1,3 +1,27 @@
+# Xbox controller layout
+
+The controller now works like this, and no button does anything blind:
+
+| Button | Out in the world | In the bag |
+|---|---|---|
+| Left stick | Move (click to sprint) | Flick up or down to pick an action |
+| Right stick | Look | |
+| A | Jump | Use the picked action |
+| B | Crouch | Close the bag |
+| X | Do what the label under the crosshair says (hold to whittle or aim) | |
+| Y | Open the bag | Close the bag |
+| RT / LT | The label's other actions, only when it shows RT or LT | |
+| LB / RB | Lean left and right | |
+| D-pad | Nothing | Pick an action |
+| Menu | Pause | Pause |
+
+- **Eat, drink, set a snare, sleep rough:** open the bag with Y, pick the action with the D-pad and press A. These used to sit on the D-pad, Y and LT, and fired the moment you touched them.
+- **RT and LT** only ever do what the label shows next to them. They used to build a fire or go to sleep wherever you stood. On the keyboard, F and Z also follow the label first, then fall back to building a fire or sleeping as before.
+- Y no longer resets the whole run while the game is paused, and LB, RB and View no longer toggle panels that are not shown.
+- The BAG button shows Y while you are using a controller, the picked action in the bag is filled in orange so it is easy to see, and the controls line on the menu lists both layouts.
+
+Checks: all node tests pass, including the new label tests for which key does what. Browser-tested with a simulated Xbox controller: the D-pad, LB, RB and View change nothing out in the world, Y opens the bag, the D-pad moves to Eat and A eats, A on Drink drinks, B closes, and RT and LT on bare ground do nothing. No browser errors. This changes input only, with nothing new drawn, so the performance stress test was not rerun.
+
 # Hands for every field action
 
 Every survival action now shows in your hands. The map goes down for a moment, and the thing you are using comes into view and moves (`field-props.js`):

@@ -12,7 +12,7 @@ lean.reset();for(let i=0;i<120;i++)lean.step(1/120,1,player,[{x:.4,z:0,radius:.1
 lean.step(.05,1,player,[{x:.4,z:0,radius:.1,height:.5}]);assert.ok(out.x>.35,'low objects do not block head');
 player.yaw=Math.PI/2;lean.step(.05,1,player,[]);assert.ok(out.z<-.35&&Math.abs(out.x)<.00001,'offset rotates with aim');
 player.state='SPRINTING';for(let i=0;i<120;i++)lean.step(1/120,1,player,[]);assert.ok(Math.abs(out.z)<.00001,'sprint recentres');assert.equal(out,lean.output);
-const pad={index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0})),id:'test'};pad.buttons[14].pressed=true;assert.equal(new GamepadInput().read([pad]).leanLeft,true);pad.buttons[15].pressed=true;assert.equal(new GamepadInput().read([pad]).leanRight,true);
+const pad={index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0})),id:'test'};pad.buttons[4].pressed=true;assert.equal(new GamepadInput().read([pad]).leanLeft,true);pad.buttons[5].pressed=true;assert.equal(new GamepadInput().read([pad]).leanRight,true);
 console.log('Passed lean direction, rotation, neutral recovery, collision clearance, low obstacles, sprint cancellation and Xbox controls.');
 
 import * as THREE from '../vendor/three.module.js';
